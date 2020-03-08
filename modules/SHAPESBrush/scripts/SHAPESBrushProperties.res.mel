@@ -1,0 +1,166 @@
+// ---------------------------------------------------------------------
+// SHAPESBrushProperties.res.mel
+// ---------------------------------------------------------------------
+
+displayString -replace
+              -value "Display tool tips for all tool settings."
+              m_SHAPESBrushProperties.kAnnotations;
+
+displayString -replace
+              -value "Use the selected mesh as the target shape to blend to with the blend brush."
+              m_SHAPESBrushProperties.kBlendMesh;
+
+displayString -replace
+              -value "The color of the brush circle."
+              m_SHAPESBrushProperties.kColor;
+
+displayString -replace
+              -value "Linear falloff"
+              m_SHAPESBrushProperties.kCurveLinear;
+
+displayString -replace
+              -value "Soft falloff"
+              m_SHAPESBrushProperties.kCurveSoft;
+
+displayString -replace
+              -value "Wide falloff"
+              m_SHAPESBrushProperties.kCurveWide;
+
+displayString -replace
+              -value "Narrow falloff"
+              m_SHAPESBrushProperties.kCurveNarrow;
+
+displayString -replace
+              -value "Smooth 1 falloff"
+              m_SHAPESBrushProperties.kCurveSmooth1;
+
+displayString -replace
+              -value "Smooth 2 falloff"
+              m_SHAPESBrushProperties.kCurveSmooth2;
+
+displayString -replace
+              -value "The number of overlapping surfaces considered for editing in surface mode."
+              m_SHAPESBrushProperties.kDepth;
+
+displayString -replace
+              -value "The index of the first overlapping surface considered for editing in surface mode."
+              m_SHAPESBrushProperties.kDepthStart;
+
+displayString -replace
+              -value "Displays the brush circle while editing."
+              m_SHAPESBrushProperties.kDrawBrush;
+
+displayString -replace
+              -value "Erase the currently cached edits for the entire mesh."
+              m_SHAPESBrushProperties.kFloodErase;
+
+displayString -replace
+              -value "Clear the erase cache. This sets a new starting point for the erase brush."
+              m_SHAPESBrushProperties.kFlushCache;
+
+displayString -replace
+              -value ("When off the history warning gets disabled which appears when using the freeze brush " +
+                      "and the mesh has history.")
+              m_SHAPESBrushProperties.kIgnoreHistoryWarning;
+
+displayString -replace
+              -value "Invert the affect of the freeze brush."
+              m_SHAPESBrushProperties.kInvertFreeze;
+
+displayString -replace
+              -value "Invert the affect of the pull brush to push vertices along the normal direction."
+              m_SHAPESBrushProperties.kInvertPull;
+
+displayString -replace
+              -value "The line width of the brush display."
+              m_SHAPESBrushProperties.kLineWidth;
+
+displayString -replace
+              -value "The type of in-view message to display while the tool is active."
+              m_SHAPESBrushProperties.kMessage;
+
+displayString -replace
+              -value ("The maximum angle offset between the camers and the surface to restrict the " +
+                     "editing to the 2D plane.")
+              m_SHAPESBrushProperties.kPlaneAngle;
+
+displayString -replace
+              -value ("When enabled the general volume of the mesh is maintained during smoothing. " +
+                      "Use Shift + Ctrl to smooth reference based in SHAPES Edit Mode.")
+              m_SHAPESBrushProperties.kRelax;
+
+displayString -replace
+              -value "The radius of the brush in which vertices are affected."
+              m_SHAPESBrushProperties.kSize;
+
+displayString -replace
+              -value "The strength of the smoothing tool."
+              m_SHAPESBrushProperties.kSmooth;
+
+displayString -replace
+              -value ("Use the selected mesh as the reference shape for smoothing. The mesh needs " +
+                      "to be at the same position as the modeling mesh but can be hidden.")
+              m_SHAPESBrushProperties.kSmoothMesh;
+
+displayString -replace
+              -value "The strength of the secondary tool."
+              m_SHAPESBrushProperties.kStrength;
+
+displayString -replace
+              -value "When enabled all editing is performed symmetrical, if possible."
+              m_SHAPESBrushProperties.kSymmetry;
+
+displayString -replace
+              -value "The axis along which the editing is performed symmetrical."
+              m_SHAPESBrushProperties.kSymmetryAxis;
+
+displayString -replace
+              -value "Choose the symmetry axis."
+              m_SHAPESBrushProperties.kSymmetryButton;
+
+displayString -replace
+              -value ("Sets the tolerance value for finding symmetry vertices. " +
+                      "Set to a higher value if not all symmetry vertices are affected." +
+                      "Set to 0 for automatic tolerance through average edge length.")
+              m_SHAPESBrushProperties.kTolerance;
+
+displayString -replace
+              -value "Unfreeze the entire mesh. All freeze data will be cleared."
+              m_SHAPESBrushProperties.kUnfreeze;
+
+displayString -replace
+              -value "Restricts the grab brush to a 2D plane depending on the view."
+              m_SHAPESBrushProperties.kUsePlane;
+
+displayString -replace
+              -value ("When enabled the editing is based on volume. " +
+                      "When off the editing is based on the connected neighbours in surface mode.")
+              m_SHAPESBrushProperties.kVolume;
+
+// ---------------------------------------------------------------------
+// MIT License
+//
+// Copyright (c) 2020 Ingo Clemens, brave rabbit
+// SHAPESBrush is under the terms of the MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+// SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
+// Author: Ingo Clemens    www.braverabbit.com
+// ---------------------------------------------------------------------

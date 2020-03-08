@@ -1,0 +1,201 @@
+// ---------------------------------------------------------------------
+// SHAPESBrushPaintFreeze.mel
+//
+// This script contains all procedures which deal with mesh freezing.
+//
+// ---------------------------------------------------------------------
+
+proc setArtAttrPaintSymmetry()
+{
+    int $state = eval("SHAPESBrushContext -query -symmetry SHAPESBrushContext1;");
+    int $axis = eval("SHAPESBrushContext -query -symmetryAxis SHAPESBrushContext1;");
+
+    string $flags = "-reflection " + $state;
+    $flags += " -ra \"";
+    if ($axis == 0)
+        $flags += "x";
+    else if ($axis == 1)
+        $flags += "y";
+    else
+        $flags += "z";
+    $flags += "\" ";
+    string $cmd = "artAttrPaintVertexCtx -edit " + $flags + "`currentCtx`";
+    eval($cmd);
+}
+
+
+proc setVertexColorDisplay( string $obj )
+{
+    if (!size($obj))
+        return;
+
+    setAttr ($obj + ".displayColorChannel") -type "string" "Ambient";
+    setAttr ($obj + ".materialBlend") 0;
+}
+
+
+global proc SHAPESBrushEraseFreeze()
+{
+    global string $gSHAPESBrushFreezeMesh;
+
+    PaintVertexColorTool;
+
+    artAttrPaintVertexCtx -edit
+                          -colorRGBValue 0.0 0.0 0.0
+                          -selectedattroper "absolute"
+                          `currentCtx`;
+    setVertexColorDisplay $gSHAPESBrushFreezeMesh;
+    setArtAttrPaintSymmetry;
+}
+
+
+global proc SHAPESBrushDeleteFreeze()
+{
+    global string $gSHAPESBrushFreezeMesh;
+
+    string $lastTool = `currentCtx`;
+
+    if (!`objExists $gSHAPESBrushFreezeMesh`)
+        return;
+
+    // Get the current color set and remove it from the mesh.
+    string $set[] = `polyColorSet -query -currentColorSet $gSHAPESBrushFreezeMesh`;
+    if (size($set) != 0)
+        polyColorSet -delete -colorSet $set[0] $gSHAPESBrushFreezeMesh;
+    setAttr ($gSHAPESBrushFreezeMesh + ".displayColors") 0;
+
+    $gSHAPESBrushFreezeMesh = "";
+
+    // Activate the last tool.
+    setToolTo $lastTool;
+}
+
+
+global proc SHAPESBrushPaintFreeze()
+{
+    global string $gSHAPESBrushFreezeMesh;
+
+    string $sel[] = `ls -selection -long`;
+    if (!size($sel))
+    {
+        $gSHAPESBrushFreezeMesh = "";
+        return;
+    }
+    // Perform checks for initially flooding the colors with black in
+    // order to smooth the painted color.
+    else
+    {
+        // If the previous mesh doesn't match the current selection
+        // reset the stored mesh name.
+        if ($gSHAPESBrushFreezeMesh != $sel[0])
+        {
+            $gSHAPESBrushFreezeMesh = "";
+            optionVar -intValue SHAPESBrushFreezeAllowHistory 0;
+        }
+        // If the names match it's still possible that a new mesh with
+        // the same name has been created but the new mesh probably
+        // doesn't have a color set assigned.
+        // If there is no color set or a differently named set it must
+        // be a different mesh and the stored name can be reset
+        else if ($gSHAPESBrushFreezeMesh != "")
+        {
+            string $set[] = `polyColorSet -query -currentColorSet $gSHAPESBrushFreezeMesh`;
+            if (size($set) == 0 || $set[0] != "SHAPESBrushFreezeSet")
+            {
+                $gSHAPESBrushFreezeMesh = "";
+                optionVar -intValue SHAPESBrushFreezeAllowHistory 0;
+            }
+        }
+    }
+
+    string $hist[] = `listHistory -groupLevels 1
+                                  -pruneDagObjects 1
+                                  -leaf 1
+                                  -future 0
+                                  $sel[0]`;
+    if (size($hist) && !`optionVar -query SHAPESBrushFreezeAllowHistory`)
+    {
+        // Release the marking menu in case it has been used
+        MarkingMenuPopDown;
+
+        if (`optionVar -query SHAPESBrushIgnoreHistoryWarning`)
+            ;
+        else
+        {
+            string $result = `confirmDialog -t "SHAPES Brush"
+                                            -m "The selected mesh has history.\n\nContinuing will disable this warning for the current mesh and nodes will be added to the history."
+                                            -b "Continue"
+                                            -b "Cancel"
+                                            -db "Cancel"
+                                            -cb "Cancel"
+                                            -ds "Cancel"`;
+            if ($result == "Continue")
+            {
+                optionVar -intValue SHAPESBrushFreezeAllowHistory 1;
+                optionVar -intValue SHAPESBrushIgnoreHistoryWarning 1;
+                if (`columnLayout -exists SHAPESBrush`)
+                    checkBoxGrp -edit -value1 1 SHAPESBrushIgnoreHistoryCheck;
+            }
+            else
+            {
+                if (`columnLayout -exists SHAPESBrush`)
+                    SHAPESBrushSetSymbolCheckBox 0 "type";
+                return;
+            }
+        }
+    }
+
+    PaintVertexColorTool;
+
+    // Flood everything black to set all vertices. This is necessary in
+    // order to be able to smooth the colors.
+    if ($gSHAPESBrushFreezeMesh == "")
+    {
+        artAttrPaintVertexCtx -edit -colorRGBValue 0.0 0.0 0.0 `currentCtx`;
+        artAttrPaintVertexCtx -edit -clear `currentCtx`;
+
+        string $allSets[] = `polyColorSet -query -allColorSets $sel[0]`;
+        if (!stringArrayContains("SHAPESBrushFreezeSet", $allSets))
+        {
+            // Rename the new color set.
+            string $set[] = `polyColorSet -query -currentColorSet $sel[0]`;
+            polyColorSet -edit -rename -colorSet $set[0] -newColorSet "SHAPESBrushFreezeSet" $sel[0];
+        }
+        else
+            polyColorSet -currentColorSet -colorSet "SHAPESBrushFreezeSet";
+    }
+
+    artAttrPaintVertexCtx -edit -colorRGBValue 0.4 0.7 1.0 -selectedattroper "absolute" `currentCtx`;
+    setVertexColorDisplay $sel[0];
+    setArtAttrPaintSymmetry;
+
+    $gSHAPESBrushFreezeMesh = $sel[0];
+}
+
+// ---------------------------------------------------------------------
+// MIT License
+//
+// Copyright (c) 2020 Ingo Clemens, brave rabbit
+// SHAPESBrush is under the terms of the MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+// SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
+// Author: Ingo Clemens    www.braverabbit.com
+// ---------------------------------------------------------------------

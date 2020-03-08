@@ -1,0 +1,333 @@
+// ---------------------------------------------------------------------
+// SHAPESBrushSetupHotkey.mel
+//
+// Procedures for setting up the SHAPES Brush hotkey.
+//
+// ---------------------------------------------------------------------
+
+global proc SHAPESBrushCreateMMHotkey( string $win )
+{
+    string $keySet = `optionMenuGrp -query -value SHAPESBrushMMHotkeySetOption`;
+    if ($keySet == "Create New")
+    {
+        if (`hotkeySet -query -exists "Maya_Default_SHAPES"`)
+            hotkeySet -edit -delete "Maya_Default_SHAPES";
+        hotkeySet -current "Maya_Default_SHAPES";
+    }
+    else
+        hotkeySet -edit -current $keySet;
+
+    string $key = `textFieldGrp -query -text SHAPESBrushMMHotkeyField`;
+    int $shiftMod = `checkBoxGrp -query -value1 SHAPESBrushMMShiftCheck`;
+    int $ctrlMod = `checkBoxGrp -query -value1 SHAPESBrushMMCtrlCheck`;
+    int $altMod = `checkBoxGrp -query -value1 SHAPESBrushMMAltCheck`;
+
+    if (`runTimeCommand -query -exists SHAPESBrushMMCommand`)
+        runTimeCommand -edit -delete SHAPESBrushMMCommand;
+    if (`runTimeCommand -query -exists SHAPESBrushMMPopDownCommand`)
+        runTimeCommand -edit -delete SHAPESBrushMMPopDownCommand;
+
+    runTimeCommand  -annotation "Open the SHAPES Brush marking menu"
+                    -category "User"
+                    -command ("SHAPESBrushMarkingMenu")
+                    SHAPESBrushMMCommand;
+
+    runTimeCommand  -annotation "Close the SHAPES Brush marking menu"
+                    -category "User"
+                    -command ("MarkingMenuPopDown")
+                    SHAPESBrushMMPopDownCommand;
+
+    nameCommand -annotation "SHAPESBrushMM"
+                -command ("SHAPESBrushMMCommand")
+                SHAPESBrushMM_NameCommand;
+    nameCommand -annotation "SHAPESBrushMMPopDown"
+                -command ("SHAPESBrushMMPopDownCommand")
+                SHAPESBrushMMPopDown_NameCommand;
+
+    string $cmd = "hotkey -keyShortcut \"" + $key + "\"";
+    if ($shiftMod == 1)
+        $cmd += " -shiftModifier";
+    if ($ctrlMod == 1)
+        $cmd += " -ctrlModifier";
+    if ($altMod == 1)
+        $cmd += " -altModifier";
+    string $cmdRelease = $cmd + " -releaseName (\"SHAPESBrushMMPopDown_NameCommand\")";
+    $cmd += " -name (\"SHAPESBrushMM_NameCommand\")";
+    eval($cmd);
+    eval($cmdRelease);
+
+    SHAPESBrushGetMMHotkey 1;
+
+    deleteUI $win;
+}
+
+
+global proc SHAPESBrushDeleteMMHotkey()
+{
+    if (`runTimeCommand -exists "SHAPESBrushMMCommand"`)
+    {
+        int $ids = `assignCommand -query -numElements`;
+        for ($i = 1; $i < $ids; $i ++)
+        {
+            string $cmd = `assignCommand -query -command $i`;
+            if (`gmatch $cmd "SHAPESBrushMM*"`)
+            {
+                string $keyArray[] = `assignCommand -query -keyArray $i`;
+                hotkey -keyShortcut $keyArray[0] -name "";
+                hotkey -keyShortcut $keyArray[0] -releaseName "";
+            }
+
+            $cmd = `assignCommand -query -name $i`;
+            if (`gmatch $cmd "SHAPESBrushMM*"`)
+            {
+                assignCommand -edit -delete $i;
+            }
+        }
+        runTimeCommand -edit -delete SHAPESBrushMMCommand;
+        runTimeCommand -edit -delete SHAPESBrushMMPopDownCommand;
+
+        optionVar -remove SHAPESBrushHotkey;
+    }
+}
+
+
+proc string keyString( string $keys )
+{
+    string $items[] = stringToStringArray($keys, ",");
+    if (size($items))
+        return tolower($items[0]);
+    return "";
+}
+
+
+proc int hasShift( string $keys )
+{
+    string $items[] = stringToStringArray($keys, ",");
+    if (size($items))
+    {
+        if ($items[0] == tolower($items[0]))
+            return 0;
+        else
+            return 1;
+    }
+    return 0;
+}
+
+
+proc int hasAlt( string $keys )
+{
+    string $items[] = stringToStringArray($keys, ",");
+    if (size($items))
+    {
+        if ($items[1])
+            return 1;
+    }
+    return 0;
+}
+
+
+proc int hasCtrl( string $keys )
+{
+    string $items[] = stringToStringArray($keys, ",");
+    if (size($items))
+    {
+        if ($items[2])
+            return 1;
+    }
+    return 0;
+}
+
+
+proc setFromCurrent()
+{
+    string $current = `SHAPESBrushGetMMHotkey 1`;
+    textFieldGrp -edit
+                 -text (keyString($current))
+                 SHAPESBrushMMHotkeyField;
+    checkBoxGrp -edit
+                -value1 (hasShift($current))
+                SHAPESBrushMMShiftCheck;
+    checkBoxGrp -edit
+                -value1 (hasCtrl($current))
+                SHAPESBrushMMCtrlCheck;
+    checkBoxGrp -edit
+                -value1 (hasAlt($current))
+                SHAPESBrushMMAltCheck;
+    if (size($current))
+    {
+        button -edit
+               -manage 1
+               SHAPESBrushDeleteMMHotkeyButton;
+        separator -edit
+                  -manage 0
+                  SHAPESBrushDeleteMMHotkeyButtonSeparator;
+    }
+}
+
+
+global proc string SHAPESBrushGetMMHotkey( int $forceUpdate )
+{
+    if (!`runTimeCommand -query -exists SHAPESBrushMMCommand`)
+        return "";
+
+    if (`optionVar -exists SHAPESBrushHotkey` && $forceUpdate == 0)
+    {
+        if (`optionVar -query SHAPESBrushHotkey` != "" &&
+            `optionVar -query SHAPESBrushHotkey` != "NONE")
+            return `optionVar -query SHAPESBrushHotkey`;
+    }
+
+    string $key[];
+    int $count = `assignCommand -query -numElements`;
+    for ($i = 1; $i <= $count; $i ++)
+    {
+        string $name = `assignCommand -query -name $i`;
+        if ($name == "SHAPESBrushMM_NameCommand")
+        {
+            $key = `assignCommand -query -keyArray $i`;
+            optionVar -stringValue SHAPESBrushHotkey (stringArrayToString($key, ","));
+        }
+    }
+    return stringArrayToString($key, ",");
+}
+
+
+global proc string SHAPESBrushBuildMenuCommand()
+{
+    string $current;
+    // Check if SHAPES is present or if it's the standalone brush.
+    if (`exists SHAPES_getHotkey`)
+        $current = SHAPES_getHotkey("brush", 0);
+    else
+        $current = SHAPESBrushGetMMHotkey(0);
+    if (!size($current))
+        return "";
+
+    string $cmd = "popupMenu -markingMenu 1 -button 1 ";
+
+    if (hasShift($current))
+        $cmd += "-shiftModifier 1 ";
+    if (hasCtrl($current))
+        $cmd += "-ctrlModifier 1 ";
+    if (hasAlt($current))
+        $cmd += "-altModifier 1 ";
+
+    $cmd += "-allowOptionBoxes 1 -parent viewPanes tempMM";
+
+    return $cmd;
+}
+
+
+proc createHotkeySetOption()
+{
+    string $keySets[] = `hotkeySet -query -hotkeySetArray`;
+    int $default = -1;
+    for ($i = 0; $i < size($keySets); $i ++)
+    {
+        if ($keySets[$i] == "Maya_Default")
+            $default = $i;
+    }
+    if ($default != -1)
+        stringArrayRemoveAtIndex($default, $keySets);
+
+    separator -style "none" -height 10;
+    optionMenuGrp -label "Set"
+                  -columnWidth2 30 100
+                  -columnAttach2 "right" "left"
+                  -columnOffset2 0 5
+                  SHAPESBrushMMHotkeySetOption;
+    menuItem -label "Create New";
+    for ($ks in $keySets)
+        menuItem -label $ks;
+}
+
+
+global proc SHAPESBrushSetupHotkey()
+{
+    string $win = "SHAPESBrushHotkeyWindow";
+    if (`window -ex $win`)
+        deleteUI $win;
+
+    window -title "" -width 186 -height 117 $win;
+
+    if (`windowPref -exists $win`)
+        windowPref -edit -width 186 -height 117 $win;
+
+    rowColumnLayout;
+
+        separator -style "none" -height 10;
+        text -label "Enter the hotkey\nfor the marking menu" -align "center";
+        createHotkeySetOption;
+        separator -style "none" -height 10;
+        textFieldGrp -label "Key"
+                     -columnWidth2 30 100
+                     -columnAttach2 "right" "left"
+                     -columnOffset2 0 5
+                     SHAPESBrushMMHotkeyField;
+        rowLayout -numberOfColumns 3;
+            checkBoxGrp -label "Shift"
+                        -columnWidth2 30 20
+                        -columnAttach2 "right" "left"
+                        -columnOffset2 0 5
+                        SHAPESBrushMMShiftCheck;
+            checkBoxGrp -label "Ctrl"
+                        -columnWidth2 30 20
+                        -columnAttach2 "right" "left"
+                        -columnOffset2 0 5
+                        SHAPESBrushMMCtrlCheck;
+            checkBoxGrp -label "Alt"
+                        -columnWidth2 25 20
+                        -columnAttach2 "right" "left"
+                        -columnOffset2 0 5
+                        SHAPESBrushMMAltCheck;
+        setParent ..;
+        separator -style "none" -height 10;
+
+        button -label "Delete Hotkey"
+               -command "SHAPESBrushDeleteMMHotkey"
+               -manage 0
+               SHAPESBrushDeleteMMHotkeyButton;
+        separator -style "none"
+                  -height 10
+                  -manage 0
+                  SHAPESBrushDeleteMMHotkeyButtonSeparator;
+
+        rowLayout -numberOfColumns 2;
+            button -label "OK" -width 100 -command ("SHAPESBrushCreateMMHotkey " + $win);
+            button -label "Cancel" -width 100 -command ("deleteUI " + $win);
+        setParent ..;
+
+    setParent ..;
+
+    setFromCurrent;
+
+    showWindow $win;
+}
+
+// ---------------------------------------------------------------------
+// MIT License
+//
+// Copyright (c) 2020 Ingo Clemens, brave rabbit
+// SHAPESBrush is under the terms of the MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+// SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
+// Author: Ingo Clemens    www.braverabbit.com
+// ---------------------------------------------------------------------

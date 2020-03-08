@@ -1,0 +1,774 @@
+// ---------------------------------------------------------------------
+// SHAPESBrushProperties.mel
+//
+// This script defines the layout and callbacks for the tool settings
+// window.
+//
+// ---------------------------------------------------------------------
+
+global proc SHAPESBrushPropertiesSetSymmetryAxis( int $value )
+{
+    string $text[] = {"X Axis", "Y Axis", "Z Axis"};
+    textField -edit -text $text[$value] SHAPESBrushSymmetryAxisField;
+}
+
+
+global proc SHAPESBrushSetSymbolCheckBox( int $button, string $group )
+{
+    string $column = "SHAPESBrushTypeColumn";
+    if ($group == "curve")
+        $column = "SHAPESBrushCurveColumn";
+
+    string $items[] = `rowColumnLayout -query -childArray $column`;
+    stringArrayRemoveAtIndex(0, $items);
+
+    for ($i = 0; $i < size($items); $i ++)
+    {
+        if ($button == $i)
+            symbolCheckBox -edit -value 1 $items[$i];
+        else
+            symbolCheckBox -edit -value 0 $items[$i];
+    }
+
+    eval("SHAPESBrushContext -edit -" + $group + " " + $button + " " + `currentCtx`);
+}
+
+
+global proc SHAPESBrushPropertiesSetDepth( int $value )
+{
+    int $depth = eval("SHAPESBrushContext -query -depthStart " + `currentCtx`);
+    $depth += $value;
+    if ($depth < 1)
+        $depth = 1;
+    SHAPESBrushContext -edit -depthStart $depth `currentCtx`;
+}
+
+
+global proc SHAPESBrushSetBrushColor()
+{
+    float $color[] = `colorSliderGrp -query -rgbValue SHAPESBrushBrushColor`;
+    SHAPESBrushContext -edit
+                       -colorR $color[0]
+                       -colorG $color[1]
+                       -colorB $color[2]
+                       `currentCtx`;
+}
+
+
+global proc SHAPESBrushSetLayoutCollapseState( string $layout, int $state )
+{
+    optionVar -intValue ($layout + "State") $state;
+}
+
+
+global proc SHAPESBrushPropertiesAddBlendMeshSubmenu( string $parent )
+{
+    global int $gShapes_sculptProcess;
+
+    int $enable;
+    if ($gShapes_sculptProcess)
+        $enable = 1;
+    menuItem -label "Blend To Original"
+             -checkBox `optionVar -query SHAPESBlendToOriginal`
+             -enable $enable
+             -parent $parent
+             -command ("if ($gShapes_sculptProcess) SHAPESBrushContext -edit -blendMesh $gShapes_sculptBlendMeshes[#1] `currentCtx`; " +
+                       "SHAPESBrushSetSymbolCheckBox 3 type; " +
+                       "setToolTo SHAPESBrushContext1; " +
+                       "optionVar -intValue SHAPESBlendToOriginal #1;");
+}
+
+
+global proc SHAPESBrushReset()
+{
+    optionVar -remove "SHAPESBrushContext1";
+    optionVar -remove "SHAPESBrushDefaultType";
+
+    optionVar -remove "SHAPESBrushSymmetryFrameState";
+    optionVar -remove "SHAPESBrushMeshFrameState";
+    optionVar -remove "SHAPESBrushDisplayFrameState";
+    optionVar -remove "SHAPESBrushHotkeyFrameState";
+
+    optionVar -remove "SHAPESBrushHideAnnotations";
+    optionVar -remove "SHAPESBrushIgnoreHistoryWarning";
+
+    optionVar -remove "SHAPESBlendToOriginal";
+}
+
+
+proc addAnnotations()
+{
+    symbolCheckBox -edit
+                   -annotation (uiRes("m_SHAPESBrushProperties.kCurveLinear"))
+                   SHAPESBrushLinearButton;
+    symbolCheckBox -edit
+                   -annotation (uiRes("m_SHAPESBrushProperties.kCurveSoft"))
+                   SHAPESBrushSoftButton;
+    symbolCheckBox -edit
+                   -annotation (uiRes("m_SHAPESBrushProperties.kCurveWide"))
+                   SHAPESBrushWideButton;
+    symbolCheckBox -edit
+                   -annotation (uiRes("m_SHAPESBrushProperties.kCurveNarrow"))
+                   SHAPESBrushNarrowButton;
+    symbolCheckBox -edit
+                   -annotation (uiRes("m_SHAPESBrushProperties.kCurveSmooth1"))
+                   SHAPESBrushSmooth1Button;
+    symbolCheckBox -edit
+                   -annotation (uiRes("m_SHAPESBrushProperties.kCurveSmooth2"))
+                   SHAPESBrushSmooth2Button;
+    floatSliderGrp -edit
+                   -annotation (uiRes("m_SHAPESBrushProperties.kSize"))
+                   SHAPESBrushSize;
+    floatSliderGrp -edit
+                   -annotation (uiRes("m_SHAPESBrushProperties.kSmooth"))
+                   SHAPESBrushSmooth;
+    floatSliderGrp -edit
+                   -annotation (uiRes("m_SHAPESBrushProperties.kStrength"))
+                   SHAPESBrushStrength;
+    checkBoxGrp -edit
+                -annotation (uiRes("m_SHAPESBrushProperties.kInvertPull"))
+                SHAPESBrushInvertPullCheck;
+    checkBoxGrp -edit
+                -annotation (uiRes("m_SHAPESBrushProperties.kVolume"))
+                SHAPESBrushVolumeCheck;
+    checkBoxGrp -edit
+                -annotation (uiRes("m_SHAPESBrushProperties.kRelax"))
+                SHAPESBrushRelaxCheck;
+    checkBox -edit
+             -annotation (uiRes("m_SHAPESBrushProperties.kUsePlane"))
+             SHAPESBrushUsePlaneCheck;
+    floatField -edit
+               -annotation (uiRes("m_SHAPESBrushProperties.kPlaneAngle"))
+               SHAPESBrushPlaneAngleField;
+    intField -edit
+             -annotation (uiRes("m_SHAPESBrushProperties.kDepthStart"))
+             SHAPESBrushDepthStart;
+    intSliderGrp -edit
+                 -annotation (uiRes("m_SHAPESBrushProperties.kDepth"))
+                 SHAPESBrushDepth;
+    button -edit
+           -annotation (uiRes("m_SHAPESBrushProperties.kFloodErase"))
+           SHAPESBrushFloodEraseButton;
+    button -edit
+           -annotation (uiRes("m_SHAPESBrushProperties.kFlushCache"))
+           SHAPESBrushFlushCacheButton;
+    button -edit
+           -annotation (uiRes("m_SHAPESBrushProperties.kUnfreeze"))
+           SHAPESBrushUnfreezeButton;
+    checkBox -edit
+             -annotation (uiRes("m_SHAPESBrushProperties.kInvertFreeze"))
+             SHAPESBrushInvertFreezeCheck;
+    checkBoxGrp -edit
+                -annotation (uiRes("m_SHAPESBrushProperties.kIgnoreHistoryWarning"))
+                SHAPESBrushIgnoreHistoryCheck;
+    checkBoxGrp -edit
+                -annotation (uiRes("m_SHAPESBrushProperties.kSymmetry"))
+                SHAPESBrushUseSymmetryCheck;
+    iconTextButton -edit
+                   -annotation (uiRes("m_SHAPESBrushProperties.kSymmetryButton"))
+                   SHAPESBrushSymmetryButton;
+    textField -edit
+              -annotation (uiRes("m_SHAPESBrushProperties.kSymmetryAxis"))
+              SHAPESBrushSymmetryAxisField;
+    floatSliderGrp -edit
+                   -annotation (uiRes("m_SHAPESBrushProperties.kTolerance"))
+                   SHAPESBrushTolerance;
+    button -edit
+           -annotation (uiRes("m_SHAPESBrushProperties.kBlendMesh"))
+           SHAPESBrushBlendMeshButton;
+    button -edit
+           -annotation (uiRes("m_SHAPESBrushProperties.kSmoothMesh"))
+           SHAPESBrushSmoothMeshButton;
+    checkBoxGrp -edit
+                -annotation (uiRes("m_SHAPESBrushProperties.kDrawBrush"))
+                SHAPESBrushDrawBrushCheck;
+    colorSliderGrp -edit
+                   -annotation (uiRes("m_SHAPESBrushProperties.kColor"))
+                   SHAPESBrushBrushColor;
+    intFieldGrp -edit
+                -annotation (uiRes("m_SHAPESBrushProperties.kLineWidth"))
+                SHAPESBrushLineWidthField;
+    checkBoxGrp -edit
+                -annotation (uiRes("m_SHAPESBrushProperties.kMessage"))
+                SHAPESBrushMessageTypeCheck;
+    checkBoxGrp -edit
+                -annotation (uiRes("m_SHAPESBrushProperties.kAnnotations"))
+                SHAPESBrushDisplayTipsCheck;
+}
+
+
+proc deleteAnnotations()
+{
+    symbolCheckBox -edit -annotation "" SHAPESBrushLinearButton;
+    symbolCheckBox -edit -annotation "" SHAPESBrushSoftButton;
+    symbolCheckBox -edit -annotation "" SHAPESBrushWideButton;
+    symbolCheckBox -edit -annotation "" SHAPESBrushNarrowButton;
+    symbolCheckBox -edit -annotation "" SHAPESBrushSmooth1Button;
+    symbolCheckBox -edit -annotation "" SHAPESBrushSmooth2Button;
+
+    floatSliderGrp -edit -annotation "" SHAPESBrushSize;
+    floatSliderGrp -edit -annotation "" SHAPESBrushSmooth;
+    floatSliderGrp -edit -annotation "" SHAPESBrushStrength;
+
+    checkBoxGrp -edit -annotation "" SHAPESBrushInvertPullCheck;
+
+    checkBoxGrp -edit -annotation "" SHAPESBrushVolumeCheck;
+    checkBoxGrp -edit -annotation "" SHAPESBrushRelaxCheck;
+
+    checkBox -edit -annotation "" SHAPESBrushUsePlaneCheck;
+    floatField -edit -annotation "" SHAPESBrushPlaneAngleField;
+
+    intField -edit -annotation "" SHAPESBrushDepthStart;
+    intSliderGrp -edit -annotation "" SHAPESBrushDepth;
+
+    button -edit -annotation "" SHAPESBrushFloodEraseButton;
+    button -edit -annotation "" SHAPESBrushFlushCacheButton;
+    button -edit -annotation "" SHAPESBrushUnfreezeButton;
+
+    checkBox -edit -annotation "" SHAPESBrushInvertFreezeCheck;
+    checkBoxGrp -edit -annotation "" SHAPESBrushIgnoreHistoryCheck;
+
+    checkBoxGrp -edit -annotation "" SHAPESBrushUseSymmetryCheck;
+    iconTextButton -edit -annotation "" SHAPESBrushSymmetryButton;
+    textField -edit -annotation "" SHAPESBrushSymmetryAxisField;
+    floatSliderGrp -edit -annotation "" SHAPESBrushTolerance;
+
+    button -edit -annotation "" SHAPESBrushBlendMeshButton;
+    button -edit -annotation "" SHAPESBrushSmoothMeshButton;
+
+    checkBoxGrp -edit -annotation "" SHAPESBrushDrawBrushCheck;
+    colorSliderGrp -edit -annotation "" SHAPESBrushBrushColor;
+    intFieldGrp -edit -annotation "" SHAPESBrushLineWidthField;
+    checkBoxGrp -edit -annotation "" SHAPESBrushMessageTypeCheck;
+    checkBoxGrp -edit -annotation "" SHAPESBrushDisplayTipsCheck;
+}
+
+
+proc int annotationsState()
+{
+    if (`optionVar -exists "SHAPESBrushHideAnnotations"`)
+        return `optionVar -query "SHAPESBrushHideAnnotations"`;
+    return 1;
+}
+
+
+global proc SHAPESBrushToggleAnnotations()
+{
+    // Clear all annotations, even if they haven't been set yet when the
+    // tool has just been initialized. When just adding the annotations
+    // it can happen that the tooltips don't show for unknown reasons,
+    // as they tend to be flaky in Maya from time to time. In this case
+    // toggling the annotations displays them correctly.
+    // Therefore they are reset first before adding the strings.
+    deleteAnnotations;
+
+    if (annotationsState())
+        addAnnotations;
+}
+
+
+global proc SHAPESBrushSetCallbacks( string $parent )
+{
+    symbolCheckBox -edit
+                   -changeCommand "SHAPESBrushSetSymbolCheckBox 0 type"
+                   SHAPESBrushGrabSlideButton;
+    symbolCheckBox -edit
+                   -changeCommand "SHAPESBrushSetSymbolCheckBox 1 type"
+                   SHAPESBrushGrabPullButton;
+    symbolCheckBox -edit
+                   -changeCommand "SHAPESBrushSetSymbolCheckBox 2 type"
+                   SHAPESBrushGrabTwistButton;
+    symbolCheckBox -edit
+                   -changeCommand "SHAPESBrushSetSymbolCheckBox 3 type"
+                   SHAPESBrushGrabBlendButton;
+    symbolCheckBox -edit
+                   -changeCommand "SHAPESBrushSetSymbolCheckBox 4 type"
+                   SHAPESBrushGrabEraseButton;
+    symbolCheckBox -edit
+                   -changeCommand "SHAPESBrushPaintFreeze; SHAPESBrushSetSymbolCheckBox 5 type"
+                   SHAPESBrushFreezeButton;
+    symbolCheckBox -edit
+                   -changeCommand "SHAPESBrushEraseFreeze; SHAPESBrushSetSymbolCheckBox 6 type"
+                   SHAPESBrushFreezeEraseButton;
+
+    symbolCheckBox -edit
+                   -changeCommand "SHAPESBrushSetSymbolCheckBox 0 curve"
+                   SHAPESBrushLinearButton;
+    symbolCheckBox -edit
+                   -changeCommand "SHAPESBrushSetSymbolCheckBox 1 curve"
+                   SHAPESBrushSoftButton;
+    symbolCheckBox -edit
+                   -changeCommand "SHAPESBrushSetSymbolCheckBox 2 curve"
+                   SHAPESBrushWideButton;
+    symbolCheckBox -edit
+                   -changeCommand "SHAPESBrushSetSymbolCheckBox 3 curve"
+                   SHAPESBrushNarrowButton;
+    symbolCheckBox -edit
+                   -changeCommand "SHAPESBrushSetSymbolCheckBox 4 curve"
+                   SHAPESBrushSmooth1Button;
+    symbolCheckBox -edit
+                   -changeCommand "SHAPESBrushSetSymbolCheckBox 5 curve"
+                   SHAPESBrushSmooth2Button;
+
+    floatSliderGrp -edit
+                   -changeCommand "SHAPESBrushContext -edit -size `floatSliderGrp -query -value SHAPESBrushSize` `currentCtx`;"
+                   SHAPESBrushSize;
+    floatSliderGrp -edit
+                   -changeCommand "SHAPESBrushContext -edit -smooth `floatSliderGrp -query -value SHAPESBrushSmooth` `currentCtx`;"
+                   SHAPESBrushSmooth;
+    floatSliderGrp -edit
+                   -changeCommand "SHAPESBrushContext -edit -strength `floatSliderGrp -query -value SHAPESBrushStrength` `currentCtx`;"
+                   SHAPESBrushStrength;
+    checkBoxGrp -edit
+                -changeCommand "SHAPESBrushContext -edit -invertPull #1 `currentCtx`;"
+                SHAPESBrushInvertPullCheck;
+
+    checkBoxGrp -edit
+                -changeCommand "SHAPESBrushContext -edit -volume #1 `currentCtx`;"
+                SHAPESBrushVolumeCheck;
+    checkBoxGrp -edit
+                -changeCommand "SHAPESBrushContext -edit -relax #1 `currentCtx`;"
+                SHAPESBrushRelaxCheck;
+
+    checkBox -edit
+             -changeCommand "SHAPESBrushContext -edit -usePlane #1 `currentCtx`;"
+             SHAPESBrushUsePlaneCheck;
+    floatField -edit
+               -changeCommand "SHAPESBrushContext -edit -planeAngle `floatField -query -value SHAPESBrushPlaneAngleField` `currentCtx`;"
+               SHAPESBrushPlaneAngleField;
+
+    intField -edit
+             -changeCommand "SHAPESBrushContext -edit -depthStart `intField -query -value SHAPESBrushDepthStart` `currentCtx`;"
+             SHAPESBrushDepthStart;
+    button -edit
+           -command "SHAPESBrushPropertiesSetDepth -1"
+           SHAPESBrushDepthDecreaseButton;
+    button -edit
+           -command "SHAPESBrushPropertiesSetDepth 1"
+           SHAPESBrushDepthIncreaseButton;
+    intSliderGrp -edit
+                 -changeCommand "SHAPESBrushContext -edit -depth `intSliderGrp -query -value SHAPESBrushDepth` `currentCtx`;"
+                 SHAPESBrushDepth;
+
+    button -edit
+           -command "SHAPESBrushContext -edit -flushCache 2 `currentCtx`;"
+           SHAPESBrushFloodEraseButton;
+    button -edit
+           -command "SHAPESBrushContext -edit -flushCache 1 `currentCtx`;"
+           SHAPESBrushFlushCacheButton;
+
+    checkBox -edit
+             -changeCommand "SHAPESBrushContext -edit -invertFreeze #1 `currentCtx`;"
+             SHAPESBrushInvertFreezeCheck;
+    button -edit
+           -command "SHAPESBrushDeleteFreeze"
+           SHAPESBrushUnfreezeButton;
+    checkBoxGrp -edit
+                -changeCommand "optionVar -iv SHAPESBrushIgnoreHistoryWarning #1"
+                SHAPESBrushIgnoreHistoryCheck;
+    checkBoxGrp -edit
+                -changeCommand "SHAPESBrushContext -edit -symmetry #1 `currentCtx`;"
+                SHAPESBrushUseSymmetryCheck;
+    menuItem -edit
+             -command "SHAPESBrushContext -edit -symmetryAxis 0 `currentCtx`; SHAPESBrushPropertiesSetSymmetryAxis 0;"
+             SHAPESBrushSymmetryXItem;
+    menuItem -edit
+             -command "SHAPESBrushContext -edit -symmetryAxis 1 `currentCtx`; SHAPESBrushPropertiesSetSymmetryAxis 1;"
+             SHAPESBrushSymmetryYItem;
+    menuItem -edit
+             -command "SHAPESBrushContext -edit -symmetryAxis 2 `currentCtx`; SHAPESBrushPropertiesSetSymmetryAxis 2;"
+             SHAPESBrushSymmetryZItem;
+    floatSliderGrp -edit
+                   -changeCommand "SHAPESBrushContext -edit -tolerance `floatSliderGrp -query -value SHAPESBrushTolerance` `currentCtx`;"
+                   SHAPESBrushTolerance;
+
+    checkBoxGrp -edit
+                -changeCommand "SHAPESBrushContext -edit -drawBrush #1 `currentCtx`;"
+                SHAPESBrushDrawBrushCheck;
+    colorSliderGrp -edit
+                   -changeCommand "SHAPESBrushSetBrushColor"
+                   SHAPESBrushBrushColor;
+    intFieldGrp -edit
+                -changeCommand "SHAPESBrushContext -edit -lineWidth #1 `currentCtx`;"
+                SHAPESBrushLineWidthField;
+    checkBoxGrp -edit
+                -changeCommand "if (`displayPref -query -wireframeOnShadedActive` == \"none\") displayPref -wireframeOnShadedActive \"full\"; else displayPref -wireframeOnShadedActive \"none\";"
+                SHAPESBrushShowWireframeCheck;
+    checkBoxGrp -edit
+                -changeCommand "SHAPESBrushContext -edit -message #1 `currentCtx`;"
+                SHAPESBrushMessageTypeCheck;
+    checkBoxGrp -edit
+                -changeCommand "optionVar -intValue \"SHAPESBrushHideAnnotations\" #1; SHAPESBrushToggleAnnotations;"
+                SHAPESBrushDisplayTipsCheck;
+
+    frameLayout -edit
+                -collapseCommand ("SHAPESBrushSetLayoutCollapseState(\"SHAPESBrushSymmetryFrame\", 1)")
+                -expandCommand ("SHAPESBrushSetLayoutCollapseState(\"SHAPESBrushSymmetryFrame\", 0)")
+                SHAPESBrushSymmetryFrame;
+    frameLayout -edit
+                -collapseCommand ("SHAPESBrushSetLayoutCollapseState(\"SHAPESBrushMeshFrame\", 1)")
+                -expandCommand ("SHAPESBrushSetLayoutCollapseState(\"SHAPESBrushMeshFrame\", 0)")
+                SHAPESBrushMeshFrame;
+    frameLayout -edit
+                -collapseCommand ("SHAPESBrushSetLayoutCollapseState(\"SHAPESBrushDisplayFrame\", 1)")
+                -expandCommand ("SHAPESBrushSetLayoutCollapseState(\"SHAPESBrushDisplayFrame\", 0)")
+                SHAPESBrushDisplayFrame;
+    frameLayout -edit
+                -collapseCommand ("SHAPESBrushSetLayoutCollapseState(\"SHAPESBrushHotkeyFrame\", 1)")
+                -expandCommand ("SHAPESBrushSetLayoutCollapseState(\"SHAPESBrushHotkeyFrame\", 0)")
+                SHAPESBrushHotkeyFrame;
+}
+
+
+global proc SHAPESBrushProperties()
+{
+    int $toolsLoaded = `pluginInfo -query -loaded SHAPESTools`;
+    string $annSmooth = "";
+    if ($toolsLoaded)
+        $annSmooth = ". Use Shift + Ctrl to smooth reference based in Edit mode.";
+
+    setUITemplate -pushTemplate OptionsTemplate;
+
+    string $parent = `toolPropertyWindow -query -location`;
+    setParent $parent;
+
+    // The tool settings start with a column layout. It's important that
+    // the layout name matches the tool name.
+    columnLayout SHAPESBrush;
+
+        frameLayout -label "Brush Settings"
+                    -labelIndent 3
+                    -collapsable 1
+                    -collapse 0
+                    -marginWidth 5
+                    -marginHeight 5
+                    SHAPESBrushFrame;
+
+            rowColumnLayout -numberOfColumns 8
+                            -columnWidth 1 135
+                            -columnOffset 1 "right" 8
+                            SHAPESBrushTypeColumn;
+                text -label "Brush";
+                symbolCheckBox -image "SHAPESBrushGrabSlide.svg"
+                               -ann ("Grab and Slide (use Shift to smooth and Ctrl to slide)" + $annSmooth)
+                               SHAPESBrushGrabSlideButton;
+                popupMenu;
+                    menuItem -label "Set as default"
+                             -command "optionVar -intValue SHAPESBrushDefaultType 0";
+                symbolCheckBox -image "SHAPESBrushGrabPull.svg"
+                               -ann ("Grab and Pull (use Shift to smooth and Ctrl to pull/push)" + $annSmooth)
+                               SHAPESBrushGrabPullButton;
+                popupMenu;
+                    menuItem -label "Set as default"
+                             -command "optionVar -intValue SHAPESBrushDefaultType 1";
+                symbolCheckBox -image "SHAPESBrushGrabTwist.svg"
+                               -ann ("Grab and Twist (use Shift to smooth and Ctrl to twist)" + $annSmooth)
+                               SHAPESBrushGrabTwistButton;
+                popupMenu;
+                    menuItem -label "Set as default"
+                             -command "optionVar -intValue SHAPESBrushDefaultType 2";
+                symbolCheckBox -image "SHAPESBrushGrabBlend.svg"
+                               -ann ("Grab and Blend (use Shift to smooth and Ctrl to blend to the secondary mesh)" + $annSmooth)
+                               SHAPESBrushGrabBlendButton;
+                popupMenu SHAPESBrushBlendMeshMenu;
+                    if ($toolsLoaded)
+                        SHAPESBrushPropertiesAddBlendMeshSubmenu SHAPESBrushBlendMeshMenu;
+                    menuItem -label "Set as default"
+                                 -command "optionVar -intValue SHAPESBrushDefaultType 3"
+                                 -parent SHAPESBrushBlendMeshMenu;
+                symbolCheckBox -image "SHAPESBrushGrabErase.svg"
+                               -ann ("Grab and Erase (use Shift to smooth and Ctrl to erase)" + $annSmooth)
+                               SHAPESBrushGrabEraseButton;
+                popupMenu;
+                    menuItem -label "Set as default"
+                             -command "optionVar -intValue SHAPESBrushDefaultType 4";
+                symbolCheckBox -image "SHAPESBrushFreezePaint.svg"
+                               -ann "Paint Freeze to prevent areas being influenced by the brush action"
+                               SHAPESBrushFreezeButton;
+                popupMenu;
+                    menuItem -label "Set as default"
+                             -command "optionVar -intValue SHAPESBrushDefaultType 5";
+                symbolCheckBox -image "SHAPESBrushFreezeErase.svg"
+                               -ann "Erase Freeze to allow frozen areas to be influenced by the brush action"
+                               SHAPESBrushFreezeEraseButton;
+                popupMenu;
+                    menuItem -label "Set as default"
+                             -command "optionVar -intValue SHAPESBrushDefaultType 6";
+            setParent ..;
+
+            rowColumnLayout -numberOfColumns 7
+                            -columnWidth 1 135
+                            -columnOffset 1 "right" 8
+                            SHAPESBrushCurveColumn;
+                text -label "Curve";
+                symbolCheckBox -onImage "SHAPESBrushLinearOn.svg"
+                               -offImage "SHAPESBrushLinearOff.svg"
+                               -ann "Linear falloff"
+                               SHAPESBrushLinearButton;
+                symbolCheckBox -onImage "SHAPESBrushSoftOn.svg"
+                               -offImage "SHAPESBrushSoftOff.svg"
+                               -ann "Soft falloff"
+                               SHAPESBrushSoftButton;
+                symbolCheckBox -onImage "SHAPESBrushWideOn.svg"
+                               -offImage "SHAPESBrushWideOff.svg"
+                               -ann "Wide falloff"
+                               SHAPESBrushWideButton;
+                symbolCheckBox -onImage "SHAPESBrushNarrowOn.svg"
+                               -offImage "SHAPESBrushNarrowOff.svg"
+                               -ann "Narrow falloff"
+                               SHAPESBrushNarrowButton;
+                symbolCheckBox -onImage "SHAPESBrushSmooth1On.svg"
+                               -offImage "SHAPESBrushSmooth1Off.svg"
+                               -ann "Smooth 1 falloff"
+                               SHAPESBrushSmooth1Button;
+                symbolCheckBox -onImage "SHAPESBrushSmooth2On.svg"
+                               -offImage "SHAPESBrushSmooth2Off.svg"
+                               -ann "Smooth 2 falloff"
+                               SHAPESBrushSmooth2Button;
+            setParent ..;
+
+            floatSliderGrp -label "Size"
+                           -precision 3
+                           -maxValue 100
+                           SHAPESBrushSize;
+            floatSliderGrp -label "Smooth Strength"
+                           -precision 3
+                           SHAPESBrushSmooth;
+            floatSliderGrp -label "Secondary Strength"
+                           -precision 3
+                           SHAPESBrushStrength;
+            checkBoxGrp -label "Invert Pull" SHAPESBrushInvertPullCheck;
+
+            separator -style "none";
+
+            checkBoxGrp -label "Relax" SHAPESBrushRelaxCheck;
+
+            rowLayout -numberOfColumns 3
+                      -columnWidth3 132 20 68;
+                text -label "Use Plane";
+                checkBox -label ""
+                         -ann "Restricts the grab brush to a 2D plane depending on the view."
+                         SHAPESBrushUsePlaneCheck;
+                floatField -precision 1 SHAPESBrushPlaneAngleField;
+            setParent ..;
+
+            rowLayout -numberOfColumns 4
+                      -columnWidth4 132 30 30 30;
+                text -label "Depth";
+                button -label "-" -width 30 SHAPESBrushDepthDecreaseButton;
+                intField -value 0 SHAPESBrushDepthStart;
+                button -label "+" -width 30 SHAPESBrushDepthIncreaseButton;
+            setParent ..;
+            intSliderGrp -label "Depth"
+                         -minValue 1
+                         -maxValue 1
+                         -manage 0
+                         SHAPESBrushDepth;
+
+            checkBoxGrp -label "Volume" SHAPESBrushVolumeCheck;
+
+            separator -style "none";
+
+            rowLayout -numberOfColumns 3
+                      -columnWidth3 134 60 90;
+                text -label "Erase";
+                button -label "Flood"
+                       SHAPESBrushFloodEraseButton;
+                button -label "Flush Cache"
+                       SHAPESBrushFlushCacheButton;
+            setParent ..;
+
+            separator -style "none";
+
+            rowLayout -numberOfColumns 3
+                      -columnWidth3 132 60 90;
+                text -label "Freeze";
+                checkBox -label "Invert" SHAPESBrushInvertFreezeCheck;
+                button -label "Un-Freeze" SHAPESBrushUnfreezeButton;
+            setParent ..;
+
+            checkBoxGrp -label "Ignore History Warning" SHAPESBrushIgnoreHistoryCheck;
+
+        setParent ..;
+
+        frameLayout -label "Symmetry Options"
+                    -labelIndent 3
+                    -collapsable 1
+                    -collapse (`optionVar -query "SHAPESBrushSymmetryFrameState"`)
+                    -marginWidth 5
+                    -marginHeight 5
+                    SHAPESBrushSymmetryFrame;
+            checkBoxGrp -label "Symmetry" SHAPESBrushUseSymmetryCheck;
+            rowLayout -numberOfColumns 3
+                      -columnWidth3 135 20 80;
+                text -label "Axis";
+                iconTextButton -width 17 -height 26 -image "popupMenuIcon.png" SHAPESBrushSymmetryButton;
+                popupMenu -button 1 -parent SHAPESBrushSymmetryButton;
+                    menuItem -label "X Axis" SHAPESBrushSymmetryXItem;
+                    menuItem -label "Y Axis" SHAPESBrushSymmetryYItem;
+                    menuItem -label "Z Axis" SHAPESBrushSymmetryZItem;
+                textField -text "X Axis" -editable 0 -height 25 SHAPESBrushSymmetryAxisField;
+            setParent ..;
+
+            floatSliderGrp  -label "Symmetry Tolerance"
+                            -precision 4
+                            -maxValue 10
+                            -ann "Sets the tolerance value for finding symmetry vertices. Set to a higher value if not all symmetry vertices are affected."
+                            SHAPESBrushTolerance;
+        setParent ..;
+
+        frameLayout -label "Meshes"
+                    -labelIndent 3
+                    -collapsable 1
+                    -collapse (`optionVar -query "SHAPESBrushMeshFrameState"`)
+                    -marginWidth 5
+                    -marginHeight 5
+                    SHAPESBrushMeshFrame;
+
+            rowLayout -numberOfColumns 3
+                      -columnWidth3 132 90 160;
+                text -label "Set from selection";
+                button -label "Blend Mesh"
+                       -command "SHAPESBrushContext -edit -blendMesh (`ls -selection -long`) SHAPESBrushContext1;"
+                       SHAPESBrushBlendMeshButton;
+                button -label "Smooth Reference Mesh"
+                       -command "SHAPESBrushContext -edit -smoothMesh (`ls -selection -long`) SHAPESBrushContext1;"
+                       SHAPESBrushSmoothMeshButton;
+            setParent ..;
+
+        setParent ..;
+
+        frameLayout -label "Display Options"
+                    -labelIndent 3
+                    -collapsable 1
+                    -collapse (`optionVar -query "SHAPESBrushDisplayFrameState"`)
+                    -marginWidth 5
+                    -marginHeight 5
+                    SHAPESBrushDisplayFrame;
+
+            checkBoxGrp -label "Draw Brush" SHAPESBrushDrawBrushCheck;
+            colorSliderGrp -label "Brush Color" SHAPESBrushBrushColor;
+            intFieldGrp -label "Line Width" SHAPESBrushLineWidthField;
+            checkBoxGrp -label "Show Wireframe" SHAPESBrushShowWireframeCheck;
+
+            separator -style "none";
+
+            checkBoxGrp -label "In-View Message" SHAPESBrushMessageTypeCheck;
+            checkBoxGrp -label "Tool Tips"
+                        -value1 `annotationsState`
+                        SHAPESBrushDisplayTipsCheck;
+
+        setParent ..;
+
+        frameLayout -label "Hotkeys"
+                    -labelIndent 3
+                    -collapsable 1
+                    -collapse (`optionVar -query "SHAPESBrushHotkeyFrameState"`)
+                    -marginWidth 5
+                    -marginHeight 5
+                    SHAPESBrushHotkeyFrame;
+
+            rowColumnLayout -numberOfColumns 2
+                            -columnWidth 1 130
+                            -columnWidth 2 260
+                            -columnSpacing 2 10;
+
+                text -label "";
+                button -label "Setup Hotkey..."
+                       -command "SHAPESBrushSetupHotkey";
+
+                // For some reason the separation is off between the
+                // first and second row. Using the blank text as an
+                // invisible separator.
+                text -label "" -height 7;
+                text -label "" -height 7;
+
+                text -align "right"
+                     -font boldLabelFont
+                     -label "LMB:";
+                text -align "left"
+                     -label "Drag mesh"
+                     -wordWrap true;
+
+                text -align "right"
+                     -font boldLabelFont
+                     -label "Ctrl + LMB:";
+                text -align "left"
+                     -label "Drag to use secondary tool."
+                     -wordWrap true;
+
+                text -align "right"
+                     -font boldLabelFont
+                     -label "Shift + LMB:";
+                text -align "left"
+                     -label "Drag to use smooth."
+                     -wordWrap true;
+
+                text -align "right"
+                     -font boldLabelFont
+                     -label "Shift + Ctrl + LMB:";
+                text -align "left"
+                     -label "Drag to use smooth based on reference mesh, if set."
+                     -wordWrap true;
+
+                text -align "right"
+                     -font boldLabelFont
+                     -label "MMB:";
+                text -align "left"
+                     -label "Drag left/right to adjust brush size."
+                     -wordWrap true;
+
+                text -align "right"
+                     -font boldLabelFont
+                     -label "Shift + MMB:";
+                text -align "left"
+                     -label "Drag up/down to adjust smoothing strength."
+                     -wordWrap true;
+
+                text -align "right"
+                     -font boldLabelFont
+                     -label "Ctrl + MMB:";
+                text -align "left"
+                     -label "Drag up/down to adjust secondary tool strength."
+                     -wordWrap true;
+
+            setParent ..;
+
+        setParent ..;
+
+    setParent ..;
+
+    setUITemplate -popTemplate;
+
+    SHAPESBrushSetCallbacks $parent;
+
+    SHAPESBrushToggleAnnotations;
+}
+
+// ---------------------------------------------------------------------
+// MIT License
+//
+// Copyright (c) 2020 Ingo Clemens, brave rabbit
+// SHAPESBrush is under the terms of the MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+// SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
+// Author: Ingo Clemens    www.braverabbit.com
+// ---------------------------------------------------------------------

@@ -1,0 +1,229 @@
+// ---------------------------------------------------------------------
+// SHAPESBrushBuildMarkingMenu.mel
+//
+// Build the marking menu for the SHAPES Brush.
+//
+// ---------------------------------------------------------------------
+
+proc setCallbacks()
+{
+    menuItem -edit
+             -command ("setToolTo SHAPESBrushContext1; SHAPESBrushContext -e -t 0 SHAPESBrushContext1;")
+             SHAPESBrushMarkingMenuSlideItem;
+
+    menuItem -edit
+             -command ("setToolTo SHAPESBrushContext1; SHAPESBrushContext -e -t 1 SHAPESBrushContext1;")
+             SHAPESBrushMarkingMenuPullItem;
+
+    menuItem -edit
+             -command ("setToolTo SHAPESBrushContext1; SHAPESBrushContext -e -t 2 SHAPESBrushContext1;")
+             SHAPESBrushMarkingMenuTwistItem;
+
+    menuItem -edit
+             -command ("setToolTo SHAPESBrushContext1; SHAPESBrushContext -e -t 3 SHAPESBrushContext1;")
+             SHAPESBrushMarkingMenuBlendItem;
+
+    menuItem -edit
+             -command ("setToolTo SHAPESBrushContext1; SHAPESBrushContext -e -t 4 SHAPESBrushContext1;")
+             SHAPESBrushMarkingMenuEraseItem;
+
+    menuItem -edit
+             -command ("SHAPESBrushSetSymbolCheckBox 5 type; SHAPESBrushPaintFreeze;")
+             SHAPESBrushMarkingMenuFreezeItem;
+
+    menuItem -edit
+             -command ("SHAPESBrushSetSymbolCheckBox 6 type; SHAPESBrushEraseFreeze;")
+             SHAPESBrushMarkingMenuEraseFreezeItem;
+
+    menuItem -edit
+             -command ("SHAPESBrushContext -edit -invertPull #1 SHAPESBrushContext1;")
+             SHAPESBrushMarkingMenuInvertPullItem;
+
+    menuItem -edit
+             -command ("SHAPESBrushContext -edit -relax #1 SHAPESBrushContext1;")
+             SHAPESBrushMarkingMenuRelaxItem;
+
+    menuItem -edit
+             -command ("SHAPESBrushContext -edit -volume #1 SHAPESBrushContext1;")
+             SHAPESBrushMarkingMenuVolumeItem;
+
+    menuItem -edit
+             -command ("SHAPESBrushContext -edit -invertFreeze #1 SHAPESBrushContext1;")
+             SHAPESBrushMarkingMenuInvertFreezeItem;
+
+    menuItem -edit
+             -command ("SHAPESBrushContext -edit -symmetry #1 SHAPESBrushContext1;")
+             SHAPESBrushMarkingMenuSymmetryItem;
+
+    menuItem -edit
+             -command ("SHAPESBrushContext -edit -symmetryAxis 0 SHAPESBrushContext1;")
+             SHAPESBrushMarkingMenuSymmetryAxisXItem;
+
+    menuItem -edit
+             -command ("SHAPESBrushContext -edit -symmetryAxis 1 SHAPESBrushContext1;")
+             SHAPESBrushMarkingMenuSymmetryAxisYItem;
+
+    menuItem -edit
+             -command ("SHAPESBrushContext -edit -symmetryAxis 2 SHAPESBrushContext1;")
+             SHAPESBrushMarkingMenuSymmetryAxisZItem;
+
+    menuItem -edit
+             -command ("SHAPESBrushContext -edit -usePlane #1 SHAPESBrushContext1;")
+             SHAPESBrushMarkingMenuUsePlaneItem;
+}
+
+
+global proc SHAPESBrushMarkingMenu()
+{
+    source SHAPESBrushSetupHotkey;
+
+    // Create the context if it doesn't exist.
+    if (!`contextInfo -ex "SHAPESBrushContext1"`)
+        $context = `eval("SHAPESBrushContext")`;
+
+    // Get the current tool settings.
+    int $type = `SHAPESBrushContext -query -type SHAPESBrushContext1`;
+    int $invertFreeze = `SHAPESBrushContext -query -invertFreeze SHAPESBrushContext1`;
+    int $invertPull = `SHAPESBrushContext -query -invertPull SHAPESBrushContext1`;
+    int $relax = `SHAPESBrushContext -query -relax SHAPESBrushContext1`;
+    int $volume = `SHAPESBrushContext -query -volume SHAPESBrushContext1`;
+    int $symmetry = `SHAPESBrushContext -query -symmetry SHAPESBrushContext1`;
+    int $symmetryAxis = `SHAPESBrushContext -query -symmetryAxis SHAPESBrushContext1`;
+    int $usePlane = `SHAPESBrushContext -query -usePlane SHAPESBrushContext1`;
+
+    int $typeList[] = {0, 0, 0, 0, 0, 0, 0};
+    $typeList[$type] = 1;
+    int $axisList[] = {0, 0, 0};
+    $axisList[$symmetryAxis] = 1;
+
+    // Remove the old marking menu.
+    if (`popupMenu -exists tempMM`) deleteUI tempMM;
+
+    // Create the command for the menu.
+    string $cmd = SHAPESBrushBuildMenuCommand();
+    if ($cmd == "")
+        error "Error reading the SHAPES Brush marking menu hotkey. Please re-assign the hotkey.";
+    eval($cmd);
+
+    // Radial menu.
+
+    menuItem -label "Grab and Slide"
+             -checkBox $typeList[0]
+             -radialPosition "W"
+             SHAPESBrushMarkingMenuSlideItem;
+
+    menuItem -label "Grab and Pull"
+             -checkBox $typeList[1]
+             -radialPosition "NW"
+             SHAPESBrushMarkingMenuPullItem;
+
+    menuItem -label "Grab and Twist"
+             -checkBox $typeList[2]
+             -radialPosition "N"
+             SHAPESBrushMarkingMenuTwistItem;
+
+    menuItem -label "Grab and Blend"
+             -checkBox $typeList[3]
+             -radialPosition "NE"
+             SHAPESBrushMarkingMenuBlendItem;
+
+    menuItem -label "Grab and Erase"
+             -checkBox $typeList[4]
+             -radialPosition "E"
+             SHAPESBrushMarkingMenuEraseItem;
+
+    menuItem -label "Paint Freeze"
+             -checkBox $typeList[5]
+             -radialPosition "SW"
+             SHAPESBrushMarkingMenuFreezeItem;
+
+    menuItem -label "Erase Freeze"
+             -checkBox $typeList[6]
+             -radialPosition "SE"
+             SHAPESBrushMarkingMenuEraseFreezeItem;
+
+    // Lower menu.
+
+    menuItem -label "Invert Pull"
+             -checkBox $invertPull
+             SHAPESBrushMarkingMenuInvertPullItem;
+
+    menuItem -label "Relax"
+             -checkBox $relax
+             SHAPESBrushMarkingMenuRelaxItem;
+
+    menuItem -label "Volume"
+             -checkBox $volume
+             SHAPESBrushMarkingMenuVolumeItem;
+
+    menuItem -divider 1;
+
+    menuItem -label "Invert Freeze"
+             -checkBox $invertFreeze
+             SHAPESBrushMarkingMenuInvertFreezeItem;
+
+    menuItem -label "Un-Freeze"
+             -command "SHAPESBrushDeleteFreeze";
+
+    menuItem -divider 1;
+
+    menuItem -label "Symmetry"
+             -checkBox $symmetry
+             SHAPESBrushMarkingMenuSymmetryItem;
+
+    menuItem -label "Axis"
+             -enable $symmetry
+             -subMenu 1;
+
+        radioMenuItemCollection;
+
+            menuItem -label "X Axis"
+                     -radioButton $axisList[0]
+                     SHAPESBrushMarkingMenuSymmetryAxisXItem;
+
+            menuItem -label "Y Axis"
+                     -radioButton $axisList[1]
+                     SHAPESBrushMarkingMenuSymmetryAxisYItem;
+
+            menuItem -label "Z Axis"
+                     -radioButton $axisList[2]
+                     SHAPESBrushMarkingMenuSymmetryAxisZItem;
+
+        setParent -menu ..;
+
+    menuItem -label "Use Plane"
+             -checkBox $usePlane
+             SHAPESBrushMarkingMenuUsePlaneItem;
+
+    setParent -menu ..;
+
+    setCallbacks;
+}
+
+// ---------------------------------------------------------------------
+// MIT License
+//
+// Copyright (c) 2020 Ingo Clemens, brave rabbit
+// SHAPESBrush is under the terms of the MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+// SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
+// Author: Ingo Clemens    www.braverabbit.com
+// ---------------------------------------------------------------------

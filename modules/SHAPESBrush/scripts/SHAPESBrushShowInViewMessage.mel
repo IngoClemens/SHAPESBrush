@@ -1,0 +1,120 @@
+// ---------------------------------------------------------------------
+// SHAPESBrushShowInViewMessage.mel
+//
+// Controls the display of the in-view message for the SHAPESBrush
+// tool.
+//
+// ---------------------------------------------------------------------
+
+global proc SHAPESBrushHideInViewMessage()
+{
+    inViewMessage -clear "topCenter";
+}
+
+
+proc string partialName( string $name )
+{
+    if (size($name))
+    {
+        string $items[] = stringToStringArray($name, "|");
+        return $items[size($items) - 1];
+    }
+    return "";
+}
+
+
+global proc SHAPESBrushShowInViewMessage()
+{
+    if (!eval("SHAPESBrushContext -query -message `currentCtx`;"))
+        return;
+
+    int $type = eval("SHAPESBrushContext -query -type `currentCtx`;");
+    string $blendMesh = eval("SHAPESBrushContext -query -blendMesh `currentCtx`;");
+    string $smoothMesh = eval("SHAPESBrushContext -query -smoothMesh `currentCtx`;");
+
+    if (size($blendMesh))
+    {
+        if (!`objExists $blendMesh`)
+        {
+            SHAPESBrushContext -edit -blendMesh "" `currentCtx`;
+            $blendMesh = "";
+        }
+        else
+            $blendMesh = partialName($blendMesh);
+    }
+    if (size($smoothMesh))
+    {
+        if (!`objExists $smoothMesh`)
+        {
+            SHAPESBrushContext -edit -smoothMesh "" `currentCtx`;
+            $smoothMesh = "";
+        }
+        else
+            $smoothMesh = partialName($smoothMesh);
+    }
+
+    string $typeString;
+    if ($type == 0)
+        $typeString = "slide";
+    else if ($type == 1)
+        $typeString = "push/pull";
+    else if ($type == 2)
+        $typeString = "twist";
+    else if ($type == 3)
+        $typeString = "blend";
+    else if ($type == 4)
+        $typeString = "erase";
+
+    string $meshString = "";
+    string $smoothString = "";
+    string $shiftString = "Shift";
+
+    if ($type == 3)
+    {
+        if (size($blendMesh))
+            $meshString = " to <hl>" + $blendMesh + "</hl>";
+        else
+            $meshString = " to <hl>None</hl>";
+    }
+
+    if (size($smoothMesh))
+    {
+        $smoothString = " with base <hl>" + $smoothMesh + "</hl>";
+        $shiftString = "Shift + Ctrl";
+    }
+
+    string $msg = ("<hl>LMB</hl> to drag.  |  " +
+                   "<hl>MMB</hl> to adjust.  |  " +
+                   "<hl>LMB + " + $shiftString + "</hl> to smooth" + $smoothString + ".  |  " +
+                   "<hl>LMB + Ctrl</hl> to " + $typeString + $meshString + ".");
+
+    inViewMessage -statusMessage $msg -position "topCenter";
+}
+
+// ---------------------------------------------------------------------
+// MIT License
+//
+// Copyright (c) 2020 Ingo Clemens, brave rabbit
+// SHAPESBrush is under the terms of the MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+// SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
+// Author: Ingo Clemens    www.braverabbit.com
+// ---------------------------------------------------------------------
