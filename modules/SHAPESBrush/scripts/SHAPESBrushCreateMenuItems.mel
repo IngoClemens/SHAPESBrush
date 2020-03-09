@@ -28,9 +28,11 @@ global proc SHAPESBrushAddMenuCommand()
     global string $gMainModifyMenu;
 
     if (`menu -ex $gMainModifyMenu`)
-        menu -edit
-             -postMenuCommand "SHAPESBrushCreateMenuItems"
-             $gMainModifyMenu;
+    {
+        string $current = `menu -query -postMenuCommand $gMainModifyMenu`;
+        string $cmd = "SHAPESBrushCreateMenuItems; " + $current;
+        menu -edit -postMenuCommand $cmd $gMainModifyMenu;
+    }
 }
 
 
@@ -74,9 +76,9 @@ global proc SHAPESBrushCreateMenuItems()
 
     // Replace the command attached to the menu with the Maya default
     // command to update the menu content.
-    menu -edit
-         -postMenuCommand ("ModObjectsMenu " + $menu)
-         $menu;
+    string $current = `menu -query -postMenuCommand $gMainModifyMenu`;
+    string $cmd = substitute("SHAPESBrushCreateMenuItems; ", $current, "");
+    menu -edit -postMenuCommand $cmd $gMainModifyMenu;
 }
 
 // ---------------------------------------------------------------------
