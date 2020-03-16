@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------
-// SHAPESBrushAddMenuItem.mel
+// SHAPESBrushCreateMenuItems.mel
 //
 // Creates a menu item for the SHAPES Brush tool in the default Maya
 // modify menu.
@@ -47,6 +47,9 @@ proc addMenuItems()
 global proc SHAPESBrushCreateMenuItems()
 {
     global string $gMainModifyMenu;
+
+    if (`menuItem -query -exists SHAPESBrushMenuDivider`)
+        return;
 
     if (!`pluginInfo -query -loaded SHAPESBrush`)
         loadPlugin SHAPESBrush;

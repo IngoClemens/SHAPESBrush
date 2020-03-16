@@ -245,7 +245,7 @@ proc createHotkeySetOption()
 global proc SHAPESBrushSetupHotkey()
 {
     string $win = "SHAPESBrushHotkeyWindow";
-    if (`window -ex $win`)
+    if (`window -exists $win`)
         deleteUI $win;
 
     window -title "" -width 186 -height 117 $win;

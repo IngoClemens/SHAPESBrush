@@ -75,6 +75,9 @@ proc setCallbacks()
 
 global proc SHAPESBrushMarkingMenu()
 {
+    if (!`pluginInfo -query -loaded SHAPESBrush`)
+        loadPlugin SHAPESBrush;
+
     source SHAPESBrushSetupHotkey;
 
     // Create the context if it doesn't exist.
