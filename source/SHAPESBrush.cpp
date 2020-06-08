@@ -878,6 +878,18 @@ MStatus SHAPESBrushContext::doPressCommon(MEvent event)
     // select from screen in case nothing is currently selected.
     event.getPosition(screenX, screenY);
     
+    // -----------------------------------------------------------------
+    // component selection
+    // -----------------------------------------------------------------
+    
+    // Get the component selection before evaluating the mesh or the
+    // component selection will get overwritten.
+    vtxSelection = getSelectionVertices();
+    
+    // -----------------------------------------------------------------
+    // mesh
+    // -----------------------------------------------------------------
+    
     getMesh(event);
     // Update the in-view message to account for changes regarding the
     // blend or smooth meshes.
@@ -908,12 +920,6 @@ MStatus SHAPESBrushContext::doPressCommon(MEvent event)
     // Reset the adjustment from the previous drag.
     initAdjust = false;
     adjustValue = 0.0;
-
-    // -----------------------------------------------------------------
-    // vertex selection
-    // -----------------------------------------------------------------
-
-    vtxSelection = getSelectionVertices();
 
     // -----------------------------------------------------------------
     // closest point on surface
@@ -1400,7 +1406,7 @@ MIntArray SHAPESBrushContext::getSelectionVertices()
 {
     unsigned int i;
 
-    MIntArray indices;
+    MIntArray vtxIndices;
     MDagPath dagPath;
     MObject compObj;
 
@@ -1414,7 +1420,7 @@ MIntArray SHAPESBrushContext::getSelectionVertices()
         {
             for (MItMeshVertex vertexIter(dagPath, compObj); !vertexIter.isDone(); vertexIter.next())
             {
-                indices.append(vertexIter.index());
+                vtxIndices.append(vertexIter.index());
             }
         }
     }
@@ -1426,8 +1432,8 @@ MIntArray SHAPESBrushContext::getSelectionVertices()
         {
             for (MItMeshEdge edgeIter(dagPath, compObj); !edgeIter.isDone(); edgeIter.next())
             {
-                indices.append(edgeIter.index(0));
-                indices.append(edgeIter.index(1));
+                vtxIndices.append(edgeIter.index(0));
+                vtxIndices.append(edgeIter.index(1));
             }
         }
     }
@@ -1442,7 +1448,7 @@ MIntArray SHAPESBrushContext::getSelectionVertices()
                 MIntArray vertices;
                 polyIter.getVertices(vertices);
                 for (i = 0; i < vertices.length(); i ++)
-                    indices.append(vertices[i]);
+                    vtxIndices.append(vertices[i]);
             }
         }
     }
@@ -1451,11 +1457,11 @@ MIntArray SHAPESBrushContext::getSelectionVertices()
     // MFnSingleIndexedComponent does that automatically.
     MFnSingleIndexedComponent compFn;
     MObject verticesObj = compFn.create(MFn::kMeshVertComponent);
-    compFn.addElements(indices);
+    compFn.addElements(vtxIndices);
     // Put the processed ids back into the array.
-    compFn.getElements(indices);
+    compFn.getElements(vtxIndices);
 
-    return indices;
+    return vtxIndices;
 }
 
 

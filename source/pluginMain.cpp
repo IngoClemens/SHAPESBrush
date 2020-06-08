@@ -10,7 +10,7 @@
 
 #include <string>
 
-static const std::string kVERSION = "3.0.0";
+static const std::string kVERSION = "3.0.1";
 
 #include <maya/MFnPlugin.h>
 
@@ -40,7 +40,7 @@ MStatus uninitializePlugin(MObject obj)
     MStatus status;
     MFnPlugin plugin(obj, "Ingo Clemens", kVERSION.c_str(), "Any");
 
-    MGlobal::executeCommand("SHAPESBrushToolCtxDelete");
+    MGlobal::executeCommand("source SHAPESBrushToolCtx; SHAPESBrushToolCtxDelete;");
 
     status = plugin.deregisterContextCommand("SHAPESBrushContext",
                                              "SHAPESBrushCmd");

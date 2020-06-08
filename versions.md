@@ -1,3 +1,7 @@
+**3.0.1 (2020-06-05)**
+* Fixed: When using a component selection the brush action is not restricted and the selection gets cleared.
+* Fixed: Script error when unloading the plug-in.
+
 **3.0.0 (2020-03-05)**
 * Initial open source release.
 * Added support for Maya 2020.
