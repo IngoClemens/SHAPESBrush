@@ -10,6 +10,7 @@
 
 #include "SHAPESBrush.h"
 
+const float DEGTORAD = 3.14159265359f / 180.0f;
 const float RADTODEG = 180.0f / 3.14159265359f;
 
 // Macro for the press/drag/release methods in case there is nothing
@@ -28,10 +29,14 @@ const unsigned int XY_PLANE = 3;
 
 const MString FREEZE_SET = "SHAPESBrushFreezeSet";
 
+
 const unsigned int UNDERSAMPLING = 2;
+const unsigned int UNDERSAMPLING_PULL = 3;
 const unsigned int MAX_DEPTH = 1;
 const unsigned int EDGE_SKIP = 5;
 
+const std::string ENV_UNDERSAMPLING_ADJUST = "SHAPES_BRUSH_UNDERSAMPLING_ADJUST";
+const std::string ENV_UNDERSAMPLING_PULL = "SHAPES_BRUSH_UNDERSAMPLING_PULL";
 
 // ---------------------------------------------------------------------
 // the tool
@@ -695,6 +700,8 @@ SHAPESBrushContext::SHAPESBrushContext()
 
 void SHAPESBrushContext::toolOnSetup(MEvent &event)
 {
+    getEnvironmentSettings();
+    
     setHelpString(helpString);
 
     MGlobal::executeCommand(enterToolCommandVal);
@@ -743,9 +750,60 @@ MStatus SHAPESBrushContext::doDrag(MEvent &event)
     status = doDragCommon(event);
     CHECK_MSTATUS_AND_RETURN_SILENT(status);
 
-    // Don't draw anything because the legacy viewport uses OpenGL
-    // which is deprecated.
+    // In order to draw the circle in 3d space but oriented to the view
+    // get the model view matrix and reset the translation and scale.
+    // The points to draw are then multiplied by the inverse matrix.
+    MMatrix modelViewMat;
+    view.modelViewMatrix(modelViewMat);
+    MTransformationMatrix transMat(modelViewMat);
+    transMat.setTranslation(MVector(), MSpace::kWorld);
+    const double scale[3] = {1.0, 1.0, 1.0};
+    transMat.setScale(scale, MSpace::kWorld);
+    modelViewMat = transMat.asMatrix();
+    
+    view.beginXorDrawing(false, true, (float)lineWidthVal, M3dView::kStippleNone);
+    
+    // -----------------------------------------------------------------
+    // display when painting or setting the brush size
+    // -----------------------------------------------------------------
+    if (drawBrushVal || event.mouseButton() == MEvent::kMiddleMouse)
+    {
+        // Draw the circle in regular paint mode.
+        if (event.mouseButton() == MEvent::kLeftMouse)
+        {
+            // During smoothing and using the secondary brush the circle
+            // remains static.
+            MPoint centerPoint = surfacePoints[0];
 
+            // To make the circle move with the mouse position during
+            // the drag modify the current world drag point, which is
+            // generated during editMesh(), by moving it along it's
+            // vector, which is scaled by the surface distance.
+            if (event.isModifierNone())
+                centerPoint = worldDragPoint + worldDragVector * surfaceDistance;
+            
+            drawGlCircle3D(centerPoint, sizeVal, modelViewMat);
+        }
+        // Adjusting the brush settings with the middle mouse button.
+        else if (event.mouseButton() == MEvent::kMiddleMouse)
+        {
+            // When adjusting the size the circle needs to remain with
+            // a static position but the size needs to change.
+            if (event.isModifierNone())
+            {
+                drawGlCircle3D(surfacePointAdjust, adjustValue, modelViewMat);
+            }
+            // When adjusting the strength the circle needs to remain
+            // fixed and only the strength indicator changes.
+            else
+            {
+                drawGlCircle3D(surfacePointAdjust, sizeVal, modelViewMat);
+            }
+        }
+    }
+    
+    view.endXorDrawing();
+    
     return status;
 }
 
@@ -757,6 +815,22 @@ MStatus SHAPESBrushContext::doRelease(MEvent &event)
     doReleaseCommon(event);
     displayPlaneHUD(event, false);
     return MStatus::kSuccess;
+}
+
+
+void SHAPESBrushContext::drawGlCircle3D(MPoint center, double size, MMatrix viewMatrix)
+{
+    unsigned int i;
+    
+    glBegin(GL_LINE_LOOP);
+    for (i = 0; i < 360; i +=2)
+    {
+        double degInRad = i * DEGTORAD;
+        MPoint point(cos(degInRad) * size, sin(degInRad) * size, 0.0);
+        point *= viewMatrix.inverse();
+        glVertex3f(float(point.x + center.x), float(point.y + center.y), float(point.z + center.z));
+    }
+    glEnd();
 }
 
 
@@ -805,7 +879,7 @@ MStatus SHAPESBrushContext::doDrag(MEvent &event,
         // Draw the circle in regular paint mode.
         if (event.mouseButton() == MEvent::kLeftMouse)
         {
-            // During smoothing is using the secondary brush the circle
+            // During smoothing and using the secondary brush the circle
             // remains static.
             MPoint centerPoint = surfacePoints[0];
             MVector circleVector = worldVector;
@@ -816,7 +890,7 @@ MStatus SHAPESBrushContext::doDrag(MEvent &event,
             // vector, which is scaled by the surface distance.
             if (event.isModifierNone())
             {
-                centerPoint = centerPoint = worldDragPoint + worldDragVector * surfaceDistance;
+                centerPoint = worldDragPoint + worldDragVector * surfaceDistance;
                 circleVector = worldDragVector;
             }
             drawManager.circle(centerPoint, circleVector, sizeVal);
@@ -902,6 +976,8 @@ MStatus SHAPESBrushContext::doPressCommon(MEvent event)
     // initialize
     performBrush = false;
     undersamplingSteps = 0;
+    undersamplingStepsPull = 0;
+    pushPullDistance = 0;
     viewPlane = PLANE_OFF;
 
     // Get the size of the viewport and calculate the center for placing
@@ -960,6 +1036,16 @@ MStatus SHAPESBrushContext::doDragCommon(MEvent event)
     // -----------------------------------------------------------------
     if (event.mouseButton() == MEvent::kLeftMouse)
     {
+        if (event.isModifierControl() && typeVal == 1)
+        {
+            // For the push/pull brush skip several evaluation steps.
+            // This improves the differentiation for the direction of
+            // the brush.
+            undersamplingStepsPull ++;
+            if (undersamplingStepsPull < varStepsPull)
+                return status;
+            undersamplingStepsPull = 0;
+        }
         editMesh(event);
     }
     // -----------------------------------------------------------------
@@ -973,7 +1059,7 @@ MStatus SHAPESBrushContext::doDragCommon(MEvent event)
         // - It also improves the differentiation between horizontal and
         //   vertical dragging when adjusting.
         undersamplingSteps ++;
-        if (undersamplingSteps < UNDERSAMPLING)
+        if (undersamplingSteps < varStepsAdjust)
             return status;
         undersamplingSteps = 0;
 
@@ -1354,6 +1440,14 @@ MStatus SHAPESBrushContext::getSelection(MDagPath &dagPath)
     // be empty.
     sel.getDagPath(0, dagPath);
     status = dagPath.extendToShape();
+    
+    if (sel.length() == 2)
+    {
+        MDagPath blendDagPath;
+        sel.getDagPath(1, blendDagPath);
+        status = blendDagPath.extendToShape();
+        blendMeshVal = blendDagPath.fullPathName();
+    }
 
     // If there is more than one shape node extend to shape will fail.
     // In this case the shape node needs to be found differently.
@@ -2659,9 +2753,13 @@ MPointArray SHAPESBrushContext::computeEdit(MPointArray newPoints,
 
     // Calculate the drag distance for the pull/push brush, which also
     // depends on the distance to the camera.
-    float factor = float(surfaceDistance * 0.005);
+    int direction = 1;
+    if (dragDistance < pushPullDistance)
+        direction = -1;
+    float factor = float(surfaceDistance * 0.005 * direction);
     if (invertPullVal)
         factor *= -1;
+    pushPullDistance = dragDistance;
 
     // Twist brush:
     // Get the position from the vertex under the mouse and create an
@@ -3017,6 +3115,60 @@ void SHAPESBrushContext::setInViewMessage(bool display)
         MGlobal::executeCommand("SHAPESBrushShowInViewMessage");
     else
         MGlobal::executeCommand("SHAPESBrushHideInViewMessage");
+}
+
+
+//
+// Description:
+//      Return the value of the given environment variable.
+//
+// Input Arguments:
+//      key                 The environment variable.
+//
+// Return Value:
+//      string              The variable content.
+//
+int SHAPESBrushContext::getEnvVar(std::string const &key)
+{
+#ifdef _WIN64
+    char *val = nullptr;
+    size_t s = 0;
+    if (_dupenv_s(&val, &s, key.c_str()) == 0 && val != nullptr)
+    {
+        return std::atoi(std::string(val).c_str());
+        free(val);
+    }
+    return -1;
+#else
+    char *val = getenv(key.c_str());
+    return val == NULL ? -1 : std::stoi(std::string(val));
+#endif
+}
+
+
+//
+// Description:
+//      Read the settings from the environment variables.
+//
+// Input Arguments:
+//      None
+//
+// Return Value:
+//      None
+//
+void SHAPESBrushContext::getEnvironmentSettings()
+{
+    int value = getEnvVar(ENV_UNDERSAMPLING_ADJUST);
+    if (value >= 0)
+        varStepsAdjust = (unsigned)value;
+    else
+        varStepsAdjust = UNDERSAMPLING;
+    
+    value = getEnvVar(ENV_UNDERSAMPLING_PULL);
+    if (value >= 0)
+        varStepsPull = (unsigned)value;
+    else
+        varStepsPull = UNDERSAMPLING_PULL;
 }
 
 

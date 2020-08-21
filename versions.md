@@ -1,3 +1,9 @@
+**3.1.0 (2020-08-21)**
+* Re-introduced support for the legacy viewport.
+* Re-introduced that defining the blend-to mesh can be performed through selection order.
+* Added two environment variables to control the undersampling while adjusting the brush and using the pull/push brush. (SHAPES_BRUSH_UNDERSAMPLING_ADJUST=2, ENV_UNDERSAMPLING_PULL=3)
+* Replaced the command-line installer by the drag-and-drop installer.
+
 **3.0.1 (2020-06-05)**
 * Fixed: When using a component selection the brush action is not restricted and the selection gets cleared.
 * Fixed: Script error when unloading the plug-in.

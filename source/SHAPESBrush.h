@@ -12,6 +12,7 @@
 #define __SHAPESBrush__SHAPESBrush__
 
 #include <iostream>
+#include <cstdlib>
 
 #include <maya/MArgDatabase.h>
 #include <maya/MArgList.h>
@@ -156,6 +157,8 @@ public:
     MStatus doPress(MEvent &event);
     MStatus doDrag(MEvent &event);
     MStatus doRelease(MEvent &event);
+    
+    void drawGlCircle3D(MPoint center, double size, MMatrix viewMatrix);
 
     // VP2.0
     MStatus doPress(MEvent &event,
@@ -228,6 +231,9 @@ public:
     MPoint centerSymmetryPoint(MPoint point,
                                MPoint referencePoint);
     void setInViewMessage(bool display);
+    
+    int getEnvVar(std::string const &key);
+    void getEnvironmentSettings();
 
     // setting the attributes
     void setBlendMesh(MString name);
@@ -293,6 +299,9 @@ private:
 
     bool performBrush;
     unsigned int undersamplingSteps;
+    unsigned int undersamplingStepsPull;
+    unsigned varStepsAdjust;
+    unsigned varStepsPull;
 
     // the tool settings
     MString blendMeshVal;
@@ -416,6 +425,9 @@ private:
                                     // edit based on the relation
                                     // between surface distance and
                                     // length of the intersection ray.
+    short pushPullDistance;         // Stores the last dragDistance
+                                    // value to determine the direction
+                                    // for using the push/pull brush.
 
     // Variables for storing the current soft selection and symmetry
     // settings.
