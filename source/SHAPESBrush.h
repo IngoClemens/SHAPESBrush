@@ -232,7 +232,6 @@ public:
                                MPoint referencePoint);
     void setInViewMessage(bool display);
     
-    int getEnvVar(std::string const &key);
     void getEnvironmentSettings();
 
     // setting the attributes

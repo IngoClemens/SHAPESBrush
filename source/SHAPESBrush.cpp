@@ -29,14 +29,10 @@ const unsigned int XY_PLANE = 3;
 
 const MString FREEZE_SET = "SHAPESBrushFreezeSet";
 
-
 const unsigned int UNDERSAMPLING = 2;
 const unsigned int UNDERSAMPLING_PULL = 3;
 const unsigned int MAX_DEPTH = 1;
 const unsigned int EDGE_SKIP = 5;
-
-const std::string ENV_UNDERSAMPLING_ADJUST = "SHAPES_BRUSH_UNDERSAMPLING_ADJUST";
-const std::string ENV_UNDERSAMPLING_PULL = "SHAPES_BRUSH_UNDERSAMPLING_PULL";
 
 // ---------------------------------------------------------------------
 // the tool
@@ -3120,34 +3116,6 @@ void SHAPESBrushContext::setInViewMessage(bool display)
 
 //
 // Description:
-//      Return the value of the given environment variable.
-//
-// Input Arguments:
-//      key                 The environment variable.
-//
-// Return Value:
-//      string              The variable content.
-//
-int SHAPESBrushContext::getEnvVar(std::string const &key)
-{
-#ifdef _WIN64
-    char *val = nullptr;
-    size_t s = 0;
-    if (_dupenv_s(&val, &s, key.c_str()) == 0 && val != nullptr)
-    {
-        return std::atoi(std::string(val).c_str());
-        free(val);
-    }
-    return -1;
-#else
-    char *val = getenv(key.c_str());
-    return val == NULL ? -1 : std::stoi(std::string(val));
-#endif
-}
-
-
-//
-// Description:
 //      Read the settings from the environment variables.
 //
 // Input Arguments:
@@ -3158,15 +3126,13 @@ int SHAPESBrushContext::getEnvVar(std::string const &key)
 //
 void SHAPESBrushContext::getEnvironmentSettings()
 {
-    int value = getEnvVar(ENV_UNDERSAMPLING_ADJUST);
-    if (value >= 0)
-        varStepsAdjust = (unsigned)value;
+    if (MGlobal::optionVarExists("SHAPESBrushUndersamplingAdjust"))
+        varStepsAdjust = (unsigned)MGlobal::optionVarIntValue("SHAPESBrushUndersamplingAdjust");
     else
         varStepsAdjust = UNDERSAMPLING;
     
-    value = getEnvVar(ENV_UNDERSAMPLING_PULL);
-    if (value >= 0)
-        varStepsPull = (unsigned)value;
+    if (MGlobal::optionVarExists("SHAPESBrushUndersamplingPull"))
+        varStepsPull = (unsigned)MGlobal::optionVarIntValue("SHAPESBrushUndersamplingPull");
     else
         varStepsPull = UNDERSAMPLING_PULL;
 }
