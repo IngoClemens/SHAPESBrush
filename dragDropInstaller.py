@@ -58,10 +58,8 @@ def getMayaVersions():
     :return: The ordered list of available Maya versions.
     :rtype: list(str)
     """
-    items = [INSTALL_ROOT, MODULES_DIR, MODULE_NAME, "plug-ins", getPlatform()]
-    path = ""
-    for item in items:
-        path = os.path.join(path, item)
+    path = getPluginsPath(MODULE_NAME)
+    path = os.path.join(path, getPlatform())
     return sorted(os.listdir(path))
 
 
@@ -92,6 +90,39 @@ def getPlatform():
     return platform
 
 
+def getPlugins():
+    """Return a list with all plug-ins contained in the installation.
+
+    :return: A list with all platform specific plug-ins.
+    :rtype: list(str)
+    """
+    plugins = []
+    version = getMayaVersions()[-1]
+    for searchModule in getModuleNames():
+        if hasPlugins(searchModule):
+            path = os.path.join(getPluginsPath(searchModule), getPlatform())
+            path = os.path.join(path, version)
+            plugins.extend(os.listdir(path))
+    return list(set(plugins))
+
+
+def getPluginsPath(name):
+    """Return the path to the plug-ins folder of the given module to
+    install.
+
+    :param name: The name of the module.
+    :type name: str
+
+    :return: The path to the modules plug-ins folder
+    :rtype: str
+    """
+    items = [INSTALL_ROOT, MODULES_DIR, name, "plug-ins"]
+    path = ""
+    for item in items:
+        path = os.path.join(path, item)
+    return path
+
+
 def getUserPrefsPath():
     """Return the path of the current user preferences.
 
@@ -102,6 +133,18 @@ def getUserPrefsPath():
     # The preferences path is returned with an ending slash. Therefore
     # it's necessary to walk up three levels.
     return os.path.abspath(os.path.join(prefsPath, "../.."))
+
+
+def hasPlugins(name):
+    """Return True, if the module contains plug-ins.
+
+    :param name: The name of the module.
+    :type name: str
+
+    :return: True, if the module contains a plug-in folder.
+    :rtype: bool
+    """
+    return os.path.isdir(getPluginsPath(name))
 
 
 def helpExists():
@@ -121,7 +164,7 @@ def installExists():
     :rtype: bool
     """
     if not os.path.isdir(os.path.join(INSTALL_ROOT, MODULES_DIR)):
-        message = "The source files for the installation cannot be found." \
+        message = "The source files for the installation cannot be found. " \
                   "Make sure that all files have been unzipped and that the " \
                   "modules folder is in the same folder as the drag and drop " \
                   "installer python file.\n\n"
@@ -148,6 +191,48 @@ def logInfo(message=""):
             logObj.write("{}\n".format(message))
     except Exception as exception:
         om2.MGlobal.displayError("Unable to write log file {}".format(LOG_FILE))
+
+
+def unloadPlugins():
+    """Unload any plug-ins which are about to be installed.
+
+    :return: True, if the plug-ins have been unloaded.
+    :rtype: bool
+    """
+    loaded = False
+    active = []
+    for item in getPlugins():
+        if cmds.pluginInfo(item, query=True, loaded=True):
+            message = "Found loaded plug-in: {}".format(item)
+            logInfo(message)
+            addProgress(message)
+            loaded = True
+            active.append(item)
+
+    if loaded:
+        message = "One or more plug-ins which are about to be installed are currently loaded. " \
+                  "To unload the plug-ins and continue with the installation the undo queue must be reset. " \
+                  "Do you want to continue?"
+        result = cmds.confirmDialog(title="Plug-ins loaded",
+                                    message=message,
+                                    button=("Continue", "Cancel"))
+        if result == "Continue":
+            cmds.flushUndo()
+            for item in active:
+                try:
+                    cmds.unloadPlugin(item)
+                    message = "Unloaded plug-in: {}".format(item)
+                    logInfo(message)
+                    addProgress(message)
+                except:
+                    message = "Unable to unload plug-in: {}".format(item)
+                    logInfo(message)
+                    addProgress(message)
+                    return False
+        else:
+            return False
+
+    return True
 
 
 # ----------------------------------------------------------------------
@@ -389,6 +474,14 @@ def prepareInstallation(*args):
     """
     # Build and show the installer window.
     showUI()
+
+    # Make sure that all plug-ins are unloaded.
+    if not unloadPlugins():
+        message = "Error: Unable to perform the installation with loaded plug-ins."
+        logInfo(message)
+        addProgress(message)
+        installationFailed()
+        return
 
     # Get the path from installed modules.
     modules, contents, mainPaths, mainModules = getExistingInstallationPaths()
