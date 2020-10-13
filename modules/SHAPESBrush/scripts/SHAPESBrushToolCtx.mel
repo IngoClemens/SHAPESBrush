@@ -23,6 +23,9 @@ proc removeLegacyOptions()
 
 global proc SHAPESBrushToolCtx()
 {
+    if (!`pluginInfo -query -loaded SHAPESBrush`)
+        loadPlugin SHAPESBrush;
+
     removeLegacyOptions;
     source SHAPESBrushPaintFreeze;
 

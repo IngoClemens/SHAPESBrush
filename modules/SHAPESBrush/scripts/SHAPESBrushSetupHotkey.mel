@@ -29,7 +29,7 @@ global proc SHAPESBrushCreateMMHotkey( string $win )
 
     runTimeCommand  -annotation "Open the SHAPES Brush marking menu"
                     -category "User"
-                    -command ("SHAPESBrushMarkingMenu")
+                    -command ("SHAPESBrushToolCtx; SHAPESBrushMarkingMenu;")
                     SHAPESBrushMMCommand;
 
     runTimeCommand  -annotation "Close the SHAPES Brush marking menu"
