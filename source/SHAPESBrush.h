@@ -4,7 +4,7 @@
 //  SHAPESBrush
 //
 //  Created by ingo on 3/28/14.
-//  Copyright (c) 2020 Ingo Clemens. All rights reserved.
+//  Copyright (c) 2021 Ingo Clemens. All rights reserved.
 //
 // ---------------------------------------------------------------------
 
@@ -157,7 +157,7 @@ public:
     MStatus doPress(MEvent &event);
     MStatus doDrag(MEvent &event);
     MStatus doRelease(MEvent &event);
-    
+
     void drawGlCircle3D(MPoint center, double size, MMatrix viewMatrix);
 
     // VP2.0
@@ -231,7 +231,7 @@ public:
     MPoint centerSymmetryPoint(MPoint point,
                                MPoint referencePoint);
     void setInViewMessage(bool display);
-    
+
     void getEnvironmentSettings();
 
     // setting the attributes
@@ -476,7 +476,7 @@ protected:
 // ---------------------------------------------------------------------
 // MIT License
 //
-// Copyright (c) 2020 Ingo Clemens, brave rabbit
+// Copyright (c) 2021 Ingo Clemens, brave rabbit
 // SHAPESBrush is under the terms of the MIT License
 //
 // Permission is hereby granted, free of charge, to any person obtaining

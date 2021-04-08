@@ -4,7 +4,7 @@
 //  SHAPESBrush
 //
 //  Created by ingo on 3/28/14.
-//  Copyright (c) 2020 Ingo Clemens. All rights reserved.
+//  Copyright (c) 2021 Ingo Clemens. All rights reserved.
 //
 // ---------------------------------------------------------------------
 
@@ -697,7 +697,7 @@ SHAPESBrushContext::SHAPESBrushContext()
 void SHAPESBrushContext::toolOnSetup(MEvent &event)
 {
     getEnvironmentSettings();
-    
+
     setHelpString(helpString);
 
     MGlobal::executeCommand(enterToolCommandVal);
@@ -756,9 +756,9 @@ MStatus SHAPESBrushContext::doDrag(MEvent &event)
     const double scale[3] = {1.0, 1.0, 1.0};
     transMat.setScale(scale, MSpace::kWorld);
     modelViewMat = transMat.asMatrix();
-    
+
     view.beginXorDrawing(false, true, (float)lineWidthVal, M3dView::kStippleNone);
-    
+
     // -----------------------------------------------------------------
     // display when painting or setting the brush size
     // -----------------------------------------------------------------
@@ -777,7 +777,7 @@ MStatus SHAPESBrushContext::doDrag(MEvent &event)
             // vector, which is scaled by the surface distance.
             if (event.isModifierNone())
                 centerPoint = worldDragPoint + worldDragVector * surfaceDistance;
-            
+
             drawGlCircle3D(centerPoint, sizeVal, modelViewMat);
         }
         // Adjusting the brush settings with the middle mouse button.
@@ -797,9 +797,9 @@ MStatus SHAPESBrushContext::doDrag(MEvent &event)
             }
         }
     }
-    
+
     view.endXorDrawing();
-    
+
     return status;
 }
 
@@ -817,7 +817,7 @@ MStatus SHAPESBrushContext::doRelease(MEvent &event)
 void SHAPESBrushContext::drawGlCircle3D(MPoint center, double size, MMatrix viewMatrix)
 {
     unsigned int i;
-    
+
     glBegin(GL_LINE_LOOP);
     for (i = 0; i < 360; i +=2)
     {
@@ -947,19 +947,19 @@ MStatus SHAPESBrushContext::doPressCommon(MEvent event)
     // Get the screen position before the mesh so that it's possible to
     // select from screen in case nothing is currently selected.
     event.getPosition(screenX, screenY);
-    
+
     // -----------------------------------------------------------------
     // component selection
     // -----------------------------------------------------------------
-    
+
     // Get the component selection before evaluating the mesh or the
     // component selection will get overwritten.
     vtxSelection = getSelectionVertices();
-    
+
     // -----------------------------------------------------------------
     // mesh
     // -----------------------------------------------------------------
-    
+
     getMesh(event);
     // Update the in-view message to account for changes regarding the
     // blend or smooth meshes.
@@ -1436,7 +1436,7 @@ MStatus SHAPESBrushContext::getSelection(MDagPath &dagPath)
     // be empty.
     sel.getDagPath(0, dagPath);
     status = dagPath.extendToShape();
-    
+
     if (sel.length() == 2)
     {
         MDagPath blendDagPath;
@@ -3130,7 +3130,7 @@ void SHAPESBrushContext::getEnvironmentSettings()
         varStepsAdjust = (unsigned)MGlobal::optionVarIntValue("SHAPESBrushUndersamplingAdjust");
     else
         varStepsAdjust = UNDERSAMPLING;
-    
+
     if (MGlobal::optionVarExists("SHAPESBrushUndersamplingPull"))
         varStepsPull = (unsigned)MGlobal::optionVarIntValue("SHAPESBrushUndersamplingPull");
     else
@@ -3868,7 +3868,7 @@ MStatus SHAPESBrushContextCmd::doQueryFlags()
 // ---------------------------------------------------------------------
 // MIT License
 //
-// Copyright (c) 2020 Ingo Clemens, brave rabbit
+// Copyright (c) 2021 Ingo Clemens, brave rabbit
 // SHAPESBrush is under the terms of the MIT License
 //
 // Permission is hereby granted, free of charge, to any person obtaining

@@ -17,7 +17,7 @@ utils.executeDeferred(addMenuItem)
 # ----------------------------------------------------------------------
 # MIT License
 #
-# Copyright (c) 2020 Ingo Clemens, brave rabbit
+# Copyright (c) 2021 Ingo Clemens, brave rabbit
 # SHAPESBrush is under the terms of the MIT License
 #
 # Permission is hereby granted, free of charge, to any person obtaining

@@ -1,3 +1,6 @@
+**3.1.1 (2021-03-29) - Update**
+* Added support for Maya 2022.
+
 **3.1.1 (2020-08-24)**
 * Changed the settings for controlling the undersampling from environment to Maya preference variables (SHAPESBrushUndersamplingAdjust and SHAPESBrushUndersamplingPull).
 

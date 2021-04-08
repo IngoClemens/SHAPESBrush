@@ -4,14 +4,16 @@
 # ----------------------------------------------------------------------
 
 import maya.cmds as cmds
-import maya.mel as mel
 from maya.api import OpenMaya as om2
 
 from datetime import datetime
 import errno
+import logging
 import os
 import shutil
 import subprocess
+
+logger = logging.getLogger(__name__)
 
 INSTALL_ROOT = os.path.dirname(os.path.realpath(__file__))
 MODULES_DIR = "modules"
@@ -191,6 +193,7 @@ def logInfo(message=""):
             logObj.write("{}\n".format(message))
     except Exception as exception:
         om2.MGlobal.displayError("Unable to write log file {}".format(LOG_FILE))
+        print(str(exception))
 
 
 def unloadPlugins():
@@ -224,7 +227,7 @@ def unloadPlugins():
                     message = "Unloaded plug-in: {}".format(item)
                     logInfo(message)
                     addProgress(message)
-                except:
+                except Exception as exception:
                     message = "Unable to unload plug-in: {}".format(item)
                     logInfo(message)
                     addProgress(message)
@@ -256,7 +259,7 @@ def copyDir(source, destination):
     except shutil.Error as error:
         message = "Error copying: {} to: {}".format(source, destination)
         logInfo(message)
-        logInfo(error)
+        logInfo(str(error))
         om2.MGlobal.displayError(message)
         return False
     return True
@@ -277,7 +280,7 @@ def removeDir(path):
     except shutil.Error as error:
         message = "Error deleting folder: {}".format(path)
         logInfo(message)
-        logInfo(error)
+        logInfo(str(error))
         om2.MGlobal.displayError(message)
         return False
     return True
@@ -286,8 +289,8 @@ def removeDir(path):
 def removeFile(fileName):
     """Delete the file at the given path.
 
-    :param path: The full path of the file to delete.
-    :type path: str
+    :param fileName: The full path of the file to delete.
+    :type fileName: str
 
     :return: True, if deleting was successful.
     :rtype: bool
@@ -295,7 +298,7 @@ def removeFile(fileName):
     try:
         os.remove(fileName)
         logInfo("Deleting: {}".format(fileName))
-    except:
+    except OSError:
         message = "Error deleting file: {}".format(fileName)
         logInfo(message)
         om2.MGlobal.displayError(message)
@@ -345,7 +348,7 @@ def read(filePath):
         try:
             with open(filePath, "r") as fileObj:
                 return list(line.rstrip() for line in fileObj)
-        except Exception as exception:
+        except OSError:
             pass
     return content
 
@@ -367,14 +370,14 @@ def write(filePath, data, mode):
         with open(filePath, mode) as fileObj:
             fileObj.write(data)
         return True
-    except Exception as exception:
+    except OSError:
         message = "Error writing: {}".format(filePath)
         logInfo(message)
     return False
 
 
 # ----------------------------------------------------------------------
-# cecking previous installations
+# checking previous installations
 # ----------------------------------------------------------------------
 
 def getExistingInstallationPaths():
@@ -486,7 +489,6 @@ def prepareInstallation(*args):
     # Get the path from installed modules.
     modules, contents, mainPaths, mainModules = getExistingInstallationPaths()
 
-    info = ""
     contentPath = ""
     modulePath = ""
     if len(mainPaths):
@@ -536,10 +538,10 @@ def performUninstall(*args):
     contents = []
     # Get the previously found paths for the modules and their contents.
     if cmds.optionVar(exists=MOD_PATHS_VAR):
-        modules = cmds.optionVar(query=(MOD_PATHS_VAR)).split(",")
+        modules = cmds.optionVar(query=MOD_PATHS_VAR).split(",")
         cmds.optionVar(remove=MOD_PATHS_VAR)
     if cmds.optionVar(exists=CONTENT_PATHS_VAR):
-        contents = cmds.optionVar(query=(CONTENT_PATHS_VAR)).split(",")
+        contents = cmds.optionVar(query=CONTENT_PATHS_VAR).split(",")
         cmds.optionVar(remove=CONTENT_PATHS_VAR)
 
     # Delete the existing modules.
@@ -622,7 +624,7 @@ def performBuildModuleFiles(*args):
     contentPath = cmds.textFieldGrp(CONTENT_PATH_FIELD,
                                     query=True,
                                     text=True)
-    # Get the path where the module files should be savwed..
+    # Get the path where the module files should be saved.
     modulePath = cmds.textFieldGrp(MODULE_PATH_FIELD,
                                    query=True,
                                    text=True)
@@ -698,9 +700,9 @@ def showEULA():
 
     layout = cmds.rowColumnLayout()
 
-    file = open(os.path.join(INSTALL_ROOT, "LICENSE"), "rb")
-    fileString = file.read()
-    file.close()
+    fileObj = open(os.path.join(INSTALL_ROOT, "LICENSE"), "rb")
+    fileString = fileObj.read()
+    fileObj.close()
 
     showLogo()
 
@@ -1077,7 +1079,7 @@ def flattenFolder(basePath):
                 if not item.startswith("."):
                     try:
                         shutil.move(os.path.join(folderPath, item), basePath)
-                    except:
+                    except OSError:
                         result = False
             if not removeDir(folderPath):
                 result = False
@@ -1109,6 +1111,7 @@ def disableButtons():
                 edit=True,
                 enable=False)
 
+
 def finish():
     """Finish the installation by cleaning up and displaying a
     confirmation window to restart Maya.
@@ -1132,7 +1135,7 @@ def installationFailed():
     om2.MGlobal.displayError("Installation failed. See install.log for details.")
     cmds.confirmDialog(title="Installation failed",
                        message="The installation has been cancelled because of an error.\nSee install.log for details.",
-                       button=("Close"))
+                       button="Close")
 
 
 # ----------------------------------------------------------------------
@@ -1162,7 +1165,7 @@ def onMayaDroppedPythonFile(*args, **kwargs):
 # ----------------------------------------------------------------------
 # License
 #
-# Copyright (c) 2020 Ingo Clemens, brave rabbit
+# Copyright (c) 2021 Ingo Clemens, brave rabbit
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
