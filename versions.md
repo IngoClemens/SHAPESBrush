@@ -1,3 +1,6 @@
+**3.1.1 (2022-06-01) - Update**
+* Added support for Maya 2023.
+
 **3.1.1 (2021-03-29) - Update**
 * Added support for Maya 2022.
 
